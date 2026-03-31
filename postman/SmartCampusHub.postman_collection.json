@@ -1,0 +1,287 @@
+{
+  "info": {
+    "name": "Smart Campus Operations Hub",
+    "description": "Complete API collection for the Smart Campus Operations Hub",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "jwt_token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/auth/me",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/logout",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resources",
+      "item": [
+        {
+          "name": "Get All Resources",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/resources?page=0&size=10", "host": ["{{base_url}}"], "path": ["api", "resources"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "10" }] }
+          }
+        },
+        {
+          "name": "Get Resource by ID",
+          "request": { "method": "GET", "url": "{{base_url}}/api/resources/1" }
+        },
+        {
+          "name": "Search Resources",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/resources/search?type=LECTURE_HALL&q=main", "host": ["{{base_url}}"], "path": ["api", "resources", "search"], "query": [{ "key": "type", "value": "LECTURE_HALL" }, { "key": "q", "value": "main" }] }
+          }
+        },
+        {
+          "name": "Create Resource",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/resources",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "jwt={{jwt_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Main Lecture Hall A\",\n  \"type\": \"LECTURE_HALL\",\n  \"capacity\": 200,\n  \"location\": \"Building A, Floor 1\",\n  \"availabilityStartTime\": \"08:00\",\n  \"availabilityEndTime\": \"18:00\",\n  \"status\": \"ACTIVE\"\n}" }
+          }
+        },
+        {
+          "name": "Update Resource",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/resources/1",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "jwt={{jwt_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Main Lecture Hall A (Updated)\",\n  \"type\": \"LECTURE_HALL\",\n  \"capacity\": 250,\n  \"location\": \"Building A, Floor 1\",\n  \"status\": \"ACTIVE\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Resource (Soft)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/resources/1",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Get All Bookings (Admin)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/bookings?page=0&size=10", "host": ["{{base_url}}"], "path": ["api", "bookings"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "10" }] },
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/bookings/my",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Create Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/bookings",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "jwt={{jwt_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"resourceId\": 1,\n  \"startTime\": \"2026-03-01T10:00:00\",\n  \"endTime\": \"2026-03-01T12:00:00\",\n  \"purpose\": \"Team standup meeting\",\n  \"expectedAttendees\": 15\n}" }
+          }
+        },
+        {
+          "name": "Approve Booking",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/bookings/1/approve",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "jwt={{jwt_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"adminComment\": \"Approved for the requested time slot\"\n}" }
+          }
+        },
+        {
+          "name": "Reject Booking",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/bookings/1/reject",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "jwt={{jwt_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"adminComment\": \"Room is under maintenance\"\n}" }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/bookings/1/cancel",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "Get All Tickets",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/tickets?page=0&size=10", "host": ["{{base_url}}"], "path": ["api", "tickets"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "10" }] },
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Get Ticket by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/tickets/1",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Create Ticket",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/tickets",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "jwt={{jwt_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"resourceId\": 1,\n  \"category\": \"Hardware\",\n  \"description\": \"Projector in Room A101 is not displaying correctly. Screen is flickering.\",\n  \"priority\": \"HIGH\"\n}" }
+          }
+        },
+        {
+          "name": "Update Ticket Status",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/tickets/1/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "jwt={{jwt_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"resolutionNotes\": \"Technician dispatched\"\n}" }
+          }
+        },
+        {
+          "name": "Assign Ticket",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/tickets/1/assign",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "jwt={{jwt_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"technicianId\": 2\n}" }
+          }
+        },
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/tickets/1/comments",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Cookie", "value": "jwt={{jwt_token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"content\": \"I've checked the projector. The bulb needs replacement.\"\n}" }
+          }
+        },
+        {
+          "name": "Get Comments",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/tickets/1/comments",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Upload Attachment",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/tickets/1/attachments",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }],
+            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/notifications",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/notifications/unread-count",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Mark as Read",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/notifications/1/read",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/notifications/read-all",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/analytics/dashboard",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Peak Hours",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/analytics/bookings/peak-hours",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Most Booked Resources",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/analytics/resources/most-booked",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        },
+        {
+          "name": "Resolution Time",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/analytics/tickets/resolution-time",
+            "header": [{ "key": "Cookie", "value": "jwt={{jwt_token}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}
