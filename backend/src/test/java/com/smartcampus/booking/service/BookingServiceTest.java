@@ -159,7 +159,7 @@ class BookingServiceTest {
     void cancel_shouldOnlyAllowOwner() {
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
 
-        assertThatThrownBy(() -> service.cancel(1L, 999L))
+        assertThatThrownBy(() -> service.cancel(1L, 999L, "User requested cancellation"))
                 .isInstanceOf(com.smartcampus.common.exception.AccessDeniedException.class);
     }
 
@@ -168,7 +168,7 @@ class BookingServiceTest {
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
 
-        BookingResponse result = service.cancel(1L, 1L);
+        BookingResponse result = service.cancel(1L, 1L, "User requested cancellation");
 
         verify(bookingRepository).save(any(Booking.class));
     }
