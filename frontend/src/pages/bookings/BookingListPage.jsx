@@ -7,10 +7,11 @@ import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
-import { Plus, XCircle, LogIn, Download } from 'lucide-react';
+import { Plus, XCircle, LogIn, Download, Search, Filter } from 'lucide-react';
 import { exportCsv } from '../../utils/exportCsv';
 import BookingQRCode from '../../components/bookings/BookingQRCode';
 import { useAuth } from '../../context/AuthContext';
+import { resourceService } from '../../services/resourceService';
 
 const ROW_BORDER_MAP = {
   PENDING: 'border-l-amber-400',
@@ -45,6 +46,9 @@ export default function BookingListPage() {
   const [bookingToCancel, setBookingToCancel] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [checkingIn, setCheckingIn] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [resourceFilter, setResourceFilter] = useState('');
+  const [resources, setResources] = useState([]);
 
   const fetchBookings = () => {
     setLoading(true);
@@ -60,6 +64,12 @@ export default function BookingListPage() {
   };
 
   useEffect(() => { fetchBookings(); }, [page]);
+
+  useEffect(() => {
+    resourceService.getAll({ size: 100 })
+      .then(res => setResources(res.data.content || res.data || []))
+      .catch(() => {});
+  }, []);
 
   const handleCancelClick = (booking) => { setBookingToCancel(booking); setCancelReason(''); setCancelModalOpen(true); };
 
@@ -119,6 +129,37 @@ export default function BookingListPage() {
         </div>
       </div>
 
+      {/* Unified Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6 bg-white dark:bg-gray-900 p-3 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search by purpose or resource name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border-none rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all"
+          />
+        </div>
+        <div className="relative sm:w-64">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Filter className="h-4 w-4 text-gray-400" />
+          </div>
+          <select
+            value={resourceFilter}
+            onChange={(e) => setResourceFilter(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border-none rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer appearance-none"
+          >
+            <option value="">All Resources</option>
+            {resources.map(res => (
+              <option key={res.id} value={res.id}>{res.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {loading ? (
         <SkeletonRows rows={5} cols={5} />
       ) : bookings.length === 0 ? (
@@ -137,7 +178,13 @@ export default function BookingListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {bookings.map((booking) => (
+                {bookings
+                  .filter(b => !resourceFilter || Number(b.resource?.id || b.resourceId) === Number(resourceFilter))
+                  .filter(b => !searchQuery || 
+                    (b.purpose || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    (b.resource?.name || b.resourceName || '').toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((booking) => (
                   <tr
                     key={booking.id}
                     className={`border-l-4 ${ROW_BORDER_MAP[booking.status] || 'border-l-transparent'} hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors`}

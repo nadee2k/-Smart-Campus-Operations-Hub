@@ -6,9 +6,10 @@ import SkeletonRows from '../../components/common/SkeletonRows';
 import EmptyState from '../../components/common/EmptyState';
 import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
-import { Plus, ChevronRight, Download } from 'lucide-react';
+import { Plus, ChevronRight, Download, Search, Filter } from 'lucide-react';
 import { exportCsv } from '../../utils/exportCsv';
 import { formatTimeAgo } from '../../utils/formatTimeAgo';
+import { resourceService } from '../../services/resourceService';
 
 const STATUS_TABS = [
   { value: '', label: 'All' },
@@ -52,6 +53,9 @@ export default function TicketListPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [resourceFilter, setResourceFilter] = useState('');
+  const [resources, setResources] = useState([]);
 
   const fetchTickets = () => {
     setLoading(true);
@@ -71,6 +75,12 @@ export default function TicketListPage() {
   };
 
   useEffect(() => { fetchTickets(); }, [page, statusFilter, priorityFilter]);
+
+  useEffect(() => {
+    resourceService.getAll({ size: 100 })
+      .then(res => setResources(res.data.content || res.data || []))
+      .catch(() => {});
+  }, []);
 
   return (
     <div>
@@ -100,38 +110,74 @@ export default function TicketListPage() {
         </div>
       </div>
 
-      {/* Status tab bar */}
-      <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl mb-3 overflow-x-auto">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => { setStatusFilter(tab.value); setPage(0); }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-              statusFilter === tab.value
-                ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <div className="flex flex-col md:flex-row gap-3 mb-6">
+        {/* Status / Priority Filters (Existing) */}
+        <div className="flex flex-1 flex-col sm:flex-row gap-3">
+          {/* Status tab bar */}
+          <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-x-auto h-[42px] flex-shrink-0">
+            {STATUS_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => { setStatusFilter(tab.value); setPage(0); }}
+                className={`px-3 py-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                  statusFilter === tab.value
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-      {/* Priority pills */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {PRIORITY_PILLS.map((pill) => (
-          <button
-            key={pill.value}
-            onClick={() => { setPriorityFilter(pill.value); setPage(0); }}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-              priorityFilter === pill.value
-                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                : 'bg-gray-50 text-gray-500 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-500 dark:hover:bg-gray-800'
-            }`}
-          >
-            {pill.label}
-          </button>
-        ))}
+          {/* Priority pills */}
+          <div className="flex items-center flex-wrap gap-2 flex-shrink-0">
+            {PRIORITY_PILLS.map((pill) => (
+              <button
+                key={pill.value}
+                onClick={() => { setPriorityFilter(pill.value); setPage(0); }}
+                className={`px-3 py-1 h-8 rounded-full text-xs font-medium transition-all ${
+                  priorityFilter === pill.value
+                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-500 dark:hover:bg-gray-800'
+                }`}
+              >
+                {pill.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Search & Resource Filter */}
+        <div className="flex flex-col sm:flex-row gap-2 md:max-w-md w-full">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search tickets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 h-[42px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm"
+            />
+          </div>
+          <div className="relative sm:w-44 flex-shrink-0">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Filter className="h-4 w-4 text-gray-400" />
+            </div>
+            <select
+              value={resourceFilter}
+              onChange={(e) => setResourceFilter(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 h-[42px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer appearance-none shadow-sm"
+            >
+              <option value="">All Resources</option>
+              {resources.map(res => (
+                <option key={res.id} value={res.id}>{truncate(res.name, 15)}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -155,7 +201,14 @@ export default function TicketListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {tickets.map((ticket) => (
+                {tickets
+                  .filter(t => !resourceFilter || Number(t.resource?.id || t.resourceId) === Number(resourceFilter))
+                  .filter(t => !searchQuery || 
+                    (t.category || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    (t.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (t.ticketNumber || '').toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((ticket) => (
                   <tr
                     key={ticket.id}
                     className={`border-l-4 ${ROW_BORDER_MAP[ticket.status] || 'border-l-transparent'} hover:bg-gray-50/50 dark:hover:bg-gray-800/30 group transition-colors`}
