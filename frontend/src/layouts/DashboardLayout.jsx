@@ -7,7 +7,7 @@ import UniOpsLogo from '../components/common/UniOpsLogo';
 import {
   LayoutDashboard, Building2, CalendarDays, Wrench, Bell,
   BarChart3, LogOut, Menu, X, Sun, Moon, ChevronDown, User,
-  Users, Activity, ClipboardList, Calendar,
+  Users, Activity, ClipboardList, Calendar, QrCode
 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -26,6 +26,7 @@ export default function DashboardLayout() {
     { to: '/resources', label: 'Resources', icon: Building2, show: true },
     { to: isAdmin ? '/bookings/admin' : '/bookings', label: 'Bookings', icon: CalendarDays, show: isAdmin || isUser },
     { to: '/bookings/calendar', label: 'Calendar', icon: Calendar, show: isUser },
+    { to: '/bookings/scanner', label: 'Scanner', icon: QrCode, show: isAdmin },
     { to: '/tickets', label: 'Tickets', icon: Wrench, show: true },
     { to: '/admin/users', label: 'Users', icon: Users, show: isAdmin },
     { to: '/admin/activity', label: 'Activity', icon: Activity, show: isAdmin },

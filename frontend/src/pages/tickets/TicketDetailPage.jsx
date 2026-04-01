@@ -385,7 +385,7 @@ export default function TicketDetailPage() {
     setSavingRating(true);
     ticketService
       .rate(id, value)
-      .then(() => { fetchTicket(); toast.success('Rating submitted'); })
+      .then(() => { fetchTicket(); toast.success('Ticket closed and rating submitted'); })
       .catch(() => {})
       .finally(() => setSavingRating(false));
   };
@@ -525,9 +525,17 @@ export default function TicketDetailPage() {
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Was this resolved to your satisfaction?</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Rate the resolution to help us improve our service.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Rate the resolution to help us improve our service. Submitting a rating will permanently close this ticket.</p>
               <div className="flex items-center gap-4 flex-wrap">
-                <StarRating value={rating} onChange={handleRate} readonly={savingRating} />
+                <StarRating value={rating} onChange={setRating} readonly={savingRating} />
+                <button
+                  onClick={() => handleRate(rating)}
+                  disabled={rating === 0 || savingRating}
+                  className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-all font-medium shadow-sm"
+                >
+                  {savingRating ? 'Closing…' : 'Submit Rating & Close Ticket'}
+                </button>
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 hidden sm:block mx-2" />
                 <button
                   onClick={handleReopen}
                   disabled={reopening}

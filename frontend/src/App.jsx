@@ -17,6 +17,7 @@ import BookingListPage from './pages/bookings/BookingListPage';
 import BookingCreatePage from './pages/bookings/BookingCreatePage';
 import BookingAdminPage from './pages/bookings/BookingAdminPage';
 import BookingCalendarPage from './pages/bookings/BookingCalendarPage';
+import BookingScannerPage from './pages/bookings/BookingScannerPage';
 
 import TicketListPage from './pages/tickets/TicketListPage';
 import TicketCreatePage from './pages/tickets/TicketCreatePage';
@@ -59,6 +60,7 @@ export default function App() {
               <Route path="/bookings/create" element={<ProtectedRoute roles={['USER']}><BookingCreatePage /></ProtectedRoute>} />
               <Route path="/bookings/admin" element={<ProtectedRoute roles={['ADMIN']}><BookingAdminPage /></ProtectedRoute>} />
               <Route path="/bookings/calendar" element={<ProtectedRoute roles={['USER']}><BookingCalendarPage /></ProtectedRoute>} />
+              <Route path="/bookings/scanner" element={<ProtectedRoute roles={['ADMIN']}><BookingScannerPage /></ProtectedRoute>} />
 
               {/* Tickets */}
               <Route path="/tickets" element={<TicketListPage />} />

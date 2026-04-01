@@ -318,6 +318,12 @@ public class TicketServiceImpl implements TicketService {
         }
         ticket.setSatisfactionRating(rating);
         ticket.setRatedAt(LocalDateTime.now());
+        
+        if (ticket.getStatus() == TicketStatus.RESOLVED) {
+            ticket.setStatus(TicketStatus.CLOSED);
+            activityLogService.log(userId, ticket.getCreatedBy().getName(), "TICKET_CLOSED", "TICKET", ticketId, "User closed and rated ticket");
+        }
+        
         Ticket saved = ticketRepository.save(ticket);
         return toResponse(saved);
     }
