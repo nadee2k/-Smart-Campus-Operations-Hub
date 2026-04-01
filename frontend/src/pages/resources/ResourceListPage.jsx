@@ -6,7 +6,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
-import { Search, Plus, MapPin, Users, Building2 } from 'lucide-react';
+import { Search, Plus, MapPin, Users, Building2, Monitor, Presentation, FlaskConical, Server } from 'lucide-react';
 
 const TYPE_PILLS = [
   { value: '', label: 'All' },
@@ -22,11 +22,22 @@ const STATUS_PILLS = [
   { value: 'OUT_OF_SERVICE', label: 'Out of Service' },
 ];
 
-const TYPE_BORDER_MAP = {
-  LECTURE_HALL: 'border-l-indigo-500',
-  LAB: 'border-l-emerald-500',
-  MEETING_ROOM: 'border-l-amber-500',
-  EQUIPMENT: 'border-l-violet-500',
+const TYPE_BG_MAP = {
+  LECTURE_HALL: 'bg-indigo-50 dark:bg-indigo-500/10',
+  LAB: 'bg-emerald-50 dark:bg-emerald-500/10',
+  MEETING_ROOM: 'bg-amber-50 dark:bg-amber-500/10',
+  EQUIPMENT: 'bg-violet-50 dark:bg-violet-500/10',
+  OTHER: 'bg-gray-50 dark:bg-gray-800',
+};
+
+const getTypeIcon = (type) => {
+  switch (type) {
+    case 'LECTURE_HALL': return <Presentation className="h-6 w-6" />;
+    case 'LAB': return <FlaskConical className="h-6 w-6" />;
+    case 'MEETING_ROOM': return <Users className="h-6 w-6" />;
+    case 'EQUIPMENT': return <Server className="h-6 w-6" />;
+    default: return <Building2 className="h-6 w-6" />;
+  }
 };
 
 export default function ResourceListPage() {
@@ -138,37 +149,54 @@ export default function ResourceListPage() {
         <EmptyState title="No resources found" message="Try adjusting your search or filters." />
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {resources.map((resource) => (
-              <Link
-                key={resource.id}
-                to={`/resources/${resource.id}`}
-                className={`block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 border-l-4 ${
-                  TYPE_BORDER_MAP[resource.type] || 'border-l-gray-300'
-                } p-5 hover:shadow-md hover:scale-[1.01] transition-all`}
-              >
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <h3 className="font-semibold text-gray-900 dark:text-white truncate">{resource.name}</h3>
-                  <StatusBadge status={resource.status} />
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                    <Building2 className="h-3.5 w-3.5 shrink-0" />
-                    <span>{resource.type?.replace(/_/g, ' ')}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                    <Users className="h-3.5 w-3.5 shrink-0" />
-                    <span>Capacity: {resource.capacity ?? 0}</span>
-                  </div>
-                  {resource.location && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <MapPin className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{resource.location}</span>
-                    </div>
-                  )}
-                </div>
-              </Link>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {resources.map((resource) => {
+               const bannerBg = TYPE_BG_MAP[resource.type] || TYPE_BG_MAP.OTHER;
+               return (
+                 <Link
+                   key={resource.id}
+                   to={`/resources/${resource.id}`}
+                   className="group flex flex-col bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1.5 transition-all duration-300"
+                 >
+                   <div className={`h-28 ${bannerBg} relative border-b border-gray-100 dark:border-gray-800/50`}>
+                      <div className="absolute top-4 right-5">
+                         <StatusBadge status={resource.status} />
+                      </div>
+                      {/* Floating Badge */}
+                      <div className="absolute -bottom-6 left-6 h-14 w-14 rounded-2xl bg-white dark:bg-gray-900 shadow-md border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 group-hover:text-indigo-500 transition-colors z-10">
+                         {getTypeIcon(resource.type)}
+                      </div>
+                   </div>
+                   
+                   {/* Content Block */}
+                   <div className="pt-10 pb-6 px-6 flex-1 flex flex-col bg-white dark:bg-gray-900">
+                     <h3 className="font-extrabold text-xl text-gray-900 dark:text-white truncate mb-6">{resource.name}</h3>
+                     <div className="space-y-4 mt-auto">
+                       <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 font-medium">
+                         <div className="h-9 w-9 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-500/20">
+                            <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                         </div>
+                         <span className="truncate">{resource.type?.replace(/_/g, ' ')}</span>
+                       </div>
+                       <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 font-medium">
+                         <div className="h-9 w-9 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-500/20">
+                            <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                         </div>
+                         <span>{resource.capacity ?? 0} Seats capacity</span>
+                       </div>
+                       {resource.location && (
+                         <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 font-medium">
+                           <div className="h-9 w-9 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center shrink-0 border border-orange-100 dark:border-orange-500/20">
+                              <MapPin className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                           </div>
+                           <span className="truncate">{resource.location}</span>
+                         </div>
+                       )}
+                     </div>
+                   </div>
+                 </Link>
+               );
+            })}
           </div>
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>

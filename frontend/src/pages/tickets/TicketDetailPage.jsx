@@ -230,7 +230,7 @@ export default function TicketDetailPage() {
   const [reopening, setReopening] = useState(false);
 
   const canManageTicket = isAdmin || isTechnician;
-  const isOwner = user && ticket && ticket.createdBy?.id === user.id;
+  const isOwner = user && ticket && ticket.createdById === user.id;
   const canAddAttachment = isOwner && (ticket?.attachments?.length ?? 0) < MAX_ATTACHMENTS;
   const canRate =
     isOwner &&
@@ -599,30 +599,15 @@ export default function TicketDetailPage() {
         </div>
       )}
 
-      {/* Satisfaction Rating */}
-      {canRate && (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-            <Star className="h-5 w-5 text-yellow-400" /> Rate this resolution
-          </h2>
-          <div className="flex items-center gap-4">
-            <StarRating value={rating} onChange={handleRate} readonly={savingRating} />
-            {rating > 0 && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">{rating} / 5</span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Display rating for non-owners when it exists */}
-      {!canRate && rating > 0 && (
+      {/* Display rating when it exists */}
+      {ticket.satisfactionRating > 0 && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
             <Star className="h-5 w-5 text-yellow-400" /> Satisfaction Rating
           </h2>
           <div className="flex items-center gap-4">
-            <StarRating value={rating} onChange={() => {}} readonly />
-            <span className="text-sm text-gray-500 dark:text-gray-400">{rating} / 5</span>
+            <StarRating value={ticket.satisfactionRating} onChange={() => {}} readonly />
+            <span className="text-sm text-gray-500 dark:text-gray-400">{ticket.satisfactionRating} / 5</span>
           </div>
         </div>
       )}

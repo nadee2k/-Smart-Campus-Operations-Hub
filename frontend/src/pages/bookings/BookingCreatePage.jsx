@@ -14,10 +14,13 @@ import {
   Sparkles,
   AlertTriangle,
   Monitor,
+  Map,
+  List,
+  Check,
 } from 'lucide-react';
 
-const TIMELINE_START = 8;
-const TIMELINE_END = 22;
+const TIMELINE_START = 0;
+const TIMELINE_END = 24;
 const TIMELINE_HOURS = TIMELINE_END - TIMELINE_START;
 
 function formatTime(dateStr) {
@@ -39,12 +42,25 @@ function getDateFromDatetime(datetimeStr) {
   return datetimeStr.split('T')[0];
 }
 
-function AvailabilityTimeline({ calendarEvents, loading }) {
+function AvailabilityTimeline({ calendarEvents, loading, selectedStart, selectedEnd }) {
   const hours = Array.from({ length: TIMELINE_HOURS }, (_, i) => TIMELINE_START + i);
 
   const blocks = useMemo(() => {
     if (!calendarEvents?.length) return [];
-    return calendarEvents.map((evt) => {
+    
+    // Filter out canceled or rejected so they show as free time
+    const validEvents = calendarEvents.filter(
+      (evt) => evt.status !== 'CANCELLED' && evt.status !== 'REJECTED'
+    );
+    
+    // Ensure approved slots are rendered last (on top) if there's an exact overlap
+    validEvents.sort((a, b) => {
+      if (a.status === 'APPROVED' && b.status !== 'APPROVED') return 1;
+      if (a.status !== 'APPROVED' && b.status === 'APPROVED') return -1;
+      return 0;
+    });
+
+    return validEvents.map((evt) => {
       const start = new Date(evt.startTime);
       const end = new Date(evt.endTime);
       const startHour = start.getHours() + start.getMinutes() / 60;
@@ -57,6 +73,23 @@ function AvailabilityTimeline({ calendarEvents, loading }) {
       return { ...evt, leftPct, widthPct };
     }).filter(Boolean);
   }, [calendarEvents]);
+
+  const selectionBlock = useMemo(() => {
+    if (!selectedStart || !selectedEnd) return null;
+    const start = new Date(selectedStart);
+    const end = new Date(selectedEnd);
+    if (isNaN(start) || isNaN(end)) return null;
+
+    const startHour = start.getHours() + start.getMinutes() / 60;
+    const endHour = end.getHours() + end.getMinutes() / 60;
+    const clampedStart = Math.max(startHour, TIMELINE_START);
+    const clampedEnd = Math.min(endHour, TIMELINE_END);
+    if (clampedEnd <= clampedStart) return null;
+
+    const leftPct = ((clampedStart - TIMELINE_START) / TIMELINE_HOURS) * 100;
+    const widthPct = ((clampedEnd - clampedStart) / TIMELINE_HOURS) * 100;
+    return { leftPct, widthPct };
+  }, [selectedStart, selectedEnd]);
 
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
@@ -100,6 +133,21 @@ function AvailabilityTimeline({ calendarEvents, loading }) {
               />
             );
           })}
+          
+          {/* Active User Selection Overlay */}
+          {selectionBlock && (
+            <div
+              className="absolute top-0 bottom-0 pointer-events-none z-20 transition-all duration-300 rounded outline outline-1 outline-indigo-500/50 bg-indigo-500/10 overflow-hidden"
+              style={{
+                left: `${selectionBlock.leftPct}%`,
+                width: `${selectionBlock.widthPct}%`,
+                backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(99, 102, 241, 0.3) 4px, rgba(99, 102, 241, 0.3) 8px)`
+              }}
+            >
+              {/* Vibrant top bar */}
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-4 mt-2 text-[11px] text-gray-500 dark:text-gray-400">
@@ -111,6 +159,10 @@ function AvailabilityTimeline({ calendarEvents, loading }) {
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-2.5 h-2.5 rounded-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600" /> Open
+          </span>
+          <span className="flex items-center gap-1 ml-4 border-l border-gray-200 dark:border-gray-700 pl-4">
+            <span className="inline-block w-3 h-3 rounded-[2px] bg-indigo-500/10 border-t border-indigo-500" style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(99, 102, 241, 0.4) 2px, rgba(99, 102, 241, 0.4) 4px)` }} />
+            <span className="text-indigo-600 dark:text-indigo-400 font-medium">Your Selection</span>
           </span>
         </div>
       </div>
@@ -139,24 +191,102 @@ function SuggestionPanel({ suggestions, onPick, loading }) {
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        {suggestions.map((s, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => onPick(s)}
-            className="flex items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-700/50 bg-white dark:bg-gray-900 px-4 py-3 text-left hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md transition-all group"
-          >
-            <Sparkles className="h-4 w-4 text-indigo-400 group-hover:text-indigo-500 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {formatDate(s.startTime)}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {formatTime(s.startTime)} – {formatTime(s.endTime)}
-              </p>
-            </div>
-          </button>
-        ))}
+        {suggestions.map((s, i) => {
+          const st = s.start || s.startTime;
+          const et = s.end || s.endTime;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onPick(s)}
+              className="flex items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-700/50 bg-white dark:bg-gray-900 px-4 py-3 text-left hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md transition-all group"
+            >
+              <Sparkles className="h-4 w-4 text-indigo-400 group-hover:text-indigo-500 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {formatDate(st)}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatTime(st)} – {formatTime(et)}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MapUnit({ resource, selected, onSelect }) {
+  return (
+    <button 
+      type="button"
+      onClick={() => onSelect(resource.id)}
+      className={`relative rounded-xl border-2 transition-all p-3 text-left flex flex-col justify-between group overflow-hidden ${
+        selected ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.2)] scale-[1.02] z-20' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80 hover:border-indigo-300 dark:hover:border-indigo-600 hover:scale-[1.02] hover:-translate-y-0.5 shadow-sm hover:z-20'
+      }`}
+    >
+      <div className="flex justify-between items-start mb-2 z-10 gap-2">
+         <div className={`font-bold leading-tight ${selected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-800 dark:text-gray-200'}`}>
+            {resource.name}
+         </div>
+         <div className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-300 dark:border-gray-600 group-hover:border-indigo-400'}`}>
+            {selected && <Check className="h-3 w-3" strokeWidth={3} />}
+         </div>
+      </div>
+      
+      <div className="z-10 bg-gray-100 dark:bg-gray-900/80 px-2 py-1.5 rounded-lg flex items-center justify-between mt-auto">
+        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{resource.type?.replace(/_/g, ' ') || 'ROOM'}</span>
+        <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1"><Users className="h-3 w-3" /> {resource.capacity}</span>
+      </div>
+      
+      {selected && (
+         <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-gradient-to-br from-indigo-200 to-indigo-500 opacity-20 rounded-full blur-xl"></div>
+      )}
+    </button>
+  );
+}
+
+function FloorPlanSelector({ resources, selectedId, onSelect }) {
+  if (!resources || resources.length === 0) return <div className="p-8 text-center text-gray-500">Loading map...</div>;
+
+  const leftResources = resources.filter((_, i) => i % 2 === 0);
+  const rightResources = resources.filter((_, i) => i % 2 !== 0);
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/20 p-2 overflow-x-auto custom-scrollbar">
+        <div className="min-w-[650px] relative mt-4 mb-2 select-none mx-auto">
+        
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-72 h-8 bg-gradient-to-b from-gray-200 dark:from-gray-800 to-transparent rounded-t-xl border-t border-x border-gray-300 dark:border-gray-700 flex items-center justify-center text-xs font-bold uppercase tracking-[0.2em] text-gray-400 z-0">
+             Main Entrance
+          </div>
+          
+          <div className="flex gap-4 pt-6">
+             {/* Left Wing */}
+             <div className="flex-1 grid grid-cols-2 gap-3 z-10">
+                {leftResources.map(r => (
+                  <MapUnit key={r.id} resource={r} selected={selectedId == r.id} onSelect={onSelect} />
+                ))}
+             </div>
+             
+             {/* Corridor */}
+             <div className="w-16 relative flex flex-col items-center shrink-0">
+                <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 border-l-2 border-dashed border-gray-300 dark:border-gray-700 z-0"></div>
+                <div className="sticky top-1/2 -translate-y-1/2 py-20 text-gray-300 dark:text-gray-700 text-[10px] font-black tracking-[0.4em] uppercase" style={{ writingMode: 'vertical-rl' }}>
+                   CENTRAL CORRIDOR
+                </div>
+             </div>
+             
+             {/* Right Wing */}
+             <div className="flex-1 grid grid-cols-2 gap-3 z-10">
+                {rightResources.map(r => (
+                  <MapUnit key={r.id} resource={r} selected={selectedId == r.id} onSelect={onSelect} />
+                ))}
+             </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -170,6 +300,7 @@ export default function BookingCreatePage() {
   const resourceIdParam = searchParams.get('resourceId') || '';
   const startParam = searchParams.get('start') || '';
 
+  const [viewMode, setViewMode] = useState('FLOOR_PLAN'); // 'LIST' | 'FLOOR_PLAN'
   const [resources, setResources] = useState([]);
   const [loadingResources, setLoadingResources] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -309,8 +440,8 @@ export default function BookingCreatePage() {
   const applySuggestion = (s) => {
     setForm((prev) => ({
       ...prev,
-      startTime: toLocalDatetimeString(s.startTime),
-      endTime: toLocalDatetimeString(s.endTime),
+      startTime: toLocalDatetimeString(s.start || s.startTime),
+      endTime: toLocalDatetimeString(s.end || s.endTime),
     }));
     setSuggestions([]);
     toast.success('Time slot applied — review and submit');
@@ -351,29 +482,83 @@ export default function BookingCreatePage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 space-y-5">
-            {/* Resource */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                <Monitor className="h-4 w-4 text-gray-400" />
-                Resource
-              </label>
-              <select
-                value={form.resourceId}
-                onChange={(e) => update('resourceId', e.target.value)}
-                disabled={loadingResources}
-                className={`${inputBase} ${errors.resourceId ? inputError : inputNormal}`}
+            {/* View Mode Toggle */}
+            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit mb-4 border border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setViewMode('FLOOR_PLAN')}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${viewMode === 'FLOOR_PLAN' ? 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
               >
-                <option value="">Select a resource</option>
-                {resources.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
-              {errors.resourceId && (
-                <p className="mt-1 text-xs text-red-500">{errors.resourceId}</p>
-              )}
+                <Map className="h-4 w-4" /> Map View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('LIST')}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${viewMode === 'LIST' ? 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+              >
+                <List className="h-4 w-4" /> List View
+              </button>
             </div>
+
+            {/* Resource */}
+            {viewMode === 'FLOOR_PLAN' ? (
+              <div className="mb-2">
+                 <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                   <Map className="h-4 w-4 text-gray-400" />
+                   Choose Location
+                 </div>
+                 <FloorPlanSelector 
+                   resources={resources} 
+                   selectedId={form.resourceId} 
+                   onSelect={(id) => update('resourceId', id)} 
+                 />
+                 {errors.resourceId && (
+                   <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 font-medium text-center shadow-sm">
+                      {errors.resourceId}
+                   </div>
+                 )}
+              </div>
+            ) : (
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  <List className="h-4 w-4 text-gray-400" />
+                  Select Resource
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                   {resources.length === 0 && !loadingResources && (
+                      <div className="col-span-full border-2 border-dashed border-gray-200 dark:border-gray-800 p-6 rounded-2xl text-center text-gray-500 text-sm">No resources found</div>
+                   )}
+                   {resources.map((r) => (
+                      <button
+                         key={r.id}
+                         type="button"
+                         onClick={() => update('resourceId', String(r.id))}
+                         className={`flex items-start gap-3 p-4 rounded-xl border-2 transition-all text-left group ${
+                            String(form.resourceId) === String(r.id)
+                               ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.15)] scale-[1.01]' 
+                               : 'border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-white dark:hover:bg-gray-800'
+                         }`}
+                      >
+                         <div className={`mt-0.5 shrink-0 flex items-center justify-center h-5 w-5 rounded-full border-2 transition-colors ${
+                            String(form.resourceId) === String(r.id) ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-300 dark:border-gray-600 group-hover:border-indigo-400'
+                         }`}>
+                            {String(form.resourceId) === String(r.id) && <Check className="h-3 w-3" strokeWidth={3} />}
+                         </div>
+                         <div>
+                            <p className={`font-semibold text-sm ${String(form.resourceId) === String(r.id) ? 'text-indigo-800 dark:text-indigo-300' : 'text-gray-900 dark:text-white'}`}>{r.name}</p>
+                            <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                               <span className="flex items-center font-medium gap-1 text-gray-600 dark:text-gray-300"><Users className="h-3 w-3"/> {r.capacity}</span>
+                               <span className="uppercase tracking-widest text-[9px] font-bold opacity-60 bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">{r.type?.replace(/_/g, ' ') || 'ROOM'}</span>
+                            </div>
+                         </div>
+                      </button>
+                   ))}
+                </div>
+                {errors.resourceId && (
+                  <p className="mt-2 text-xs text-red-500 font-medium">{errors.resourceId}</p>
+                )}
+              </div>
+            )}
 
             {/* Start Time */}
             <div>
@@ -412,7 +597,12 @@ export default function BookingCreatePage() {
 
           {/* Availability Timeline */}
           {form.resourceId && selectedDate && (
-            <AvailabilityTimeline calendarEvents={calendarEvents} loading={loadingCalendar} />
+            <AvailabilityTimeline 
+              calendarEvents={calendarEvents} 
+              loading={loadingCalendar} 
+              selectedStart={form.startTime} 
+              selectedEnd={form.endTime} 
+            />
           )}
 
           {/* Conflict Suggestions */}
