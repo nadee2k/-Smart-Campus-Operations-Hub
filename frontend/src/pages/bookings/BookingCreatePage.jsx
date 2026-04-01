@@ -236,8 +236,8 @@ export default function BookingCreatePage() {
     if (!form.purpose?.trim()) next.purpose = 'Purpose is required';
     if (form.expectedAttendees === '' || form.expectedAttendees == null) {
       next.expectedAttendees = 'Expected attendees is required';
-    } else if (Number(form.expectedAttendees) < 0) {
-      next.expectedAttendees = 'Must be 0 or greater';
+    } else if (Number(form.expectedAttendees) < 1) {
+      next.expectedAttendees = 'At least 1 attendee required';
     }
     if (form.startTime && form.endTime && new Date(form.endTime) <= new Date(form.startTime)) {
       next.endTime = 'End time must be after start time';
@@ -272,10 +272,13 @@ export default function BookingCreatePage() {
     if (!validate()) return;
 
     setSuggestions([]);
+    // Ensure resourceId is a number (backend expects Long)
+    // Append seconds to datetime strings for proper LocalDateTime parsing
+    const ensureSeconds = (dt) => dt && dt.length === 16 ? dt + ':00' : dt;
     const payload = {
-      resourceId: form.resourceId,
-      startTime: form.startTime,
-      endTime: form.endTime,
+      resourceId: Number(form.resourceId),
+      startTime: ensureSeconds(form.startTime),
+      endTime: ensureSeconds(form.endTime),
       purpose: form.purpose.trim(),
       expectedAttendees: Number(form.expectedAttendees),
     };
@@ -292,7 +295,12 @@ export default function BookingCreatePage() {
           toast.error('Time slot conflicts with an existing booking');
           fetchSuggestions(form.resourceId, form.startTime, form.endTime);
         } else {
-          toast.error(err.response?.data?.message || 'Failed to create booking');
+          const d = err.response?.data;
+          if (d?.errors && Object.keys(d.errors).length > 0) {
+            toast.error(Object.values(d.errors).join(', '));
+          } else {
+            toast.error(d?.message || 'Failed to create booking');
+          }
         }
       })
       .finally(() => setSubmitting(false));
@@ -441,7 +449,7 @@ export default function BookingCreatePage() {
               </label>
               <input
                 type="number"
-                min={0}
+                min={1}
                 value={form.expectedAttendees}
                 onChange={(e) => update('expectedAttendees', e.target.value)}
                 className={`${inputBase} ${errors.expectedAttendees ? inputError : inputNormal}`}
