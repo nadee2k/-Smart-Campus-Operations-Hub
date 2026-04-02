@@ -166,7 +166,7 @@ export default function ResourceListPage() {
                    to={`/resources/${resource.id}`}
                    className="group flex flex-col bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-lg hover:shadow-black/5 hover:-translate-y-1 transition-all duration-300"
                  >
-                   <div className={`h-32 ${bannerBg} relative border-b border-gray-100 dark:border-gray-800/50 overflow-hidden`}>
+                   <div className={`h-32 ${bannerBg} relative border-b border-gray-100 dark:border-gray-800/50`}>
                       <img 
                         src={TYPE_IMAGE_MAP[resource.type] || TYPE_IMAGE_MAP.OTHER} 
                         alt="" 
@@ -176,7 +176,7 @@ export default function ResourceListPage() {
                          <StatusBadge status={resource.status} />
                       </div>
                       {/* Floating Badge */}
-                      <div className="absolute -bottom-6 left-5 h-13 w-13 rounded-xl bg-white dark:bg-gray-900 shadow-md border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors z-10">
+                      <div className="absolute -bottom-6 left-5 h-12 w-12 rounded-xl bg-white dark:bg-gray-900 shadow-md border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors z-10">
                          {getTypeIcon(resource.type)}
                       </div>
                    </div>
