@@ -20,10 +20,10 @@ import {
 } from 'lucide-react';
 
 const ICON_MAP = {
-  BOOKING: { icon: CalendarDays, gradient: 'from-indigo-500 to-violet-500' },
-  TICKET: { icon: Wrench, gradient: 'from-amber-500 to-orange-500' },
-  RESOURCE: { icon: Building2, gradient: 'from-emerald-500 to-teal-500' },
-  USER: { icon: User, gradient: 'from-rose-500 to-pink-500' },
+  BOOKING: { icon: CalendarDays, bg: 'bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-800' },
+  TICKET: { icon: Wrench, bg: 'bg-zinc-600 dark:bg-zinc-400 text-white dark:text-zinc-900' },
+  RESOURCE: { icon: Building2, bg: 'bg-zinc-700 dark:bg-zinc-300 text-white dark:text-zinc-900' },
+  USER: { icon: User, bg: 'bg-zinc-500 dark:bg-zinc-500 text-white dark:text-zinc-100' },
 };
 
 function getIconConfig(actionType) {
@@ -162,13 +162,19 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">
-          <span className="bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">
+      <div className="relative rounded-2xl overflow-hidden bg-gray-900 border border-gray-200 dark:border-gray-800 p-8 sm:p-10 mb-2">
+        <img 
+          src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&q=80&w=2000" 
+          alt="Profile" 
+          className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay grayscale"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
+        <div className="relative z-10">
+          <h1 className="text-3xl sm:text-4xl font-medium text-white tracking-tight drop-shadow-md">
             My Profile
-          </span>
-        </h1>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">Manage your campus operations hub account.</p>
+          </h1>
+          <p className="mt-2 text-gray-300 font-light text-lg drop-shadow-sm">Manage your campus operations hub account.</p>
+        </div>
       </div>
 
       {/* User Info Card */}
@@ -183,7 +189,7 @@ export default function ProfilePage() {
                 className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl object-cover border-2 border-gray-200 dark:border-gray-700"
               />
             ) : (
-              <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white text-3xl sm:text-4xl font-bold shadow-lg">
+              <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-zinc-800 dark:bg-zinc-200 flex items-center justify-center text-white dark:text-zinc-800 text-3xl sm:text-4xl font-bold shadow-lg">
                 {initial}
               </div>
             )}
@@ -198,14 +204,14 @@ export default function ProfilePage() {
                     type="text"
                     value={editedName}
                     onChange={(e) => setEditedName(e.target.value)}
-                    className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent max-w-xs"
+                    className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-zinc-400 focus:border-transparent max-w-xs"
                     placeholder="Your name"
                     autoFocus
                   />
                   <button
                     onClick={handleSaveName}
                     disabled={saving}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
                   >
                     <Save className="h-4 w-4" />
                     Save
@@ -224,7 +230,7 @@ export default function ProfilePage() {
                   <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{displayName}</h2>
                   <button
                     onClick={handleStartEdit}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-zinc-700 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
                     title="Edit name"
                   >
                     <Edit3 className="h-4 w-4" />
@@ -241,7 +247,7 @@ export default function ProfilePage() {
 
             {/* Role badge */}
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-zinc-100 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300">
                 {role}
               </span>
               <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -255,7 +261,7 @@ export default function ProfilePage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Bookings', value: totalBookings, thisMonth: stats?.bookingsThisMonth, icon: CalendarDays, iconBg: 'bg-indigo-100 dark:bg-indigo-900/40', iconColor: 'text-indigo-600 dark:text-indigo-400' },
+          { label: 'Total Bookings', value: totalBookings, thisMonth: stats?.bookingsThisMonth, icon: CalendarDays, iconBg: 'bg-zinc-100 dark:bg-zinc-800/60', iconColor: 'text-zinc-700 dark:text-zinc-300' },
           { label: 'Approved', value: approvedBookings, icon: CalendarCheck, iconBg: 'bg-emerald-100 dark:bg-emerald-900/40', iconColor: 'text-emerald-600 dark:text-emerald-400' },
           { label: 'Total Tickets', value: totalTickets, thisMonth: stats?.ticketsThisMonth, icon: Wrench, iconBg: 'bg-amber-100 dark:bg-amber-900/40', iconColor: 'text-amber-600 dark:text-amber-400' },
           { label: 'Avg Satisfaction', value: avgSatisfaction ? `${Number(avgSatisfaction).toFixed(1)} ★` : '—', icon: Star, iconBg: 'bg-yellow-100 dark:bg-yellow-900/40', iconColor: 'text-yellow-600 dark:text-yellow-500' },
@@ -270,7 +276,7 @@ export default function ProfilePage() {
                   </p>
                   <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{card.value ?? '—'}</p>
                   {card.thisMonth != null && (
-                    <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5 font-medium">
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5 font-medium">
                       +{card.thisMonth} this month
                     </p>
                   )}
@@ -311,7 +317,7 @@ export default function ProfilePage() {
                     className={`relative flex items-start gap-4 pl-0 ${link ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl p-2 -m-2 transition-colors' : ''}`}
                   >
                     <div
-                      className={`relative z-10 h-11 w-11 shrink-0 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white shadow-lg`}
+                      className={`relative z-10 h-11 w-11 shrink-0 rounded-xl ${config.bg} flex items-center justify-center shadow-sm`}
                     >
                       <Icon className="h-5 w-5" />
                     </div>

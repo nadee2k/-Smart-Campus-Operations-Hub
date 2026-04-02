@@ -62,11 +62,11 @@ export default function AnalyticsDashboardPage() {
   if (!stats) return null;
 
   const statCards = [
-    { label: 'Total Resources', value: stats.totalResources, icon: Building2, color: 'text-indigo-600 dark:text-indigo-400' },
+    { label: 'Total Resources', value: stats.totalResources, icon: Building2, color: 'text-zinc-700 dark:text-zinc-300' },
     { label: 'Total Bookings', value: stats.totalBookings, icon: CalendarDays, color: 'text-emerald-600 dark:text-emerald-400' },
     { label: 'Pending Bookings', value: stats.pendingBookings, icon: Clock, color: 'text-amber-600 dark:text-amber-400' },
     { label: 'Open Tickets', value: stats.openTickets, icon: Wrench, color: 'text-red-600 dark:text-red-400' },
-    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'text-violet-600 dark:text-violet-400' },
+    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'text-zinc-600 dark:text-zinc-400' },
   ];
 
   return (
@@ -148,7 +148,7 @@ export default function AnalyticsDashboardPage() {
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resolution Metrics</h2>
           <div className="flex flex-col items-center justify-center h-[300px]">
-            <Clock className="h-12 w-12 text-indigo-500 mb-4" />
+            <Clock className="h-12 w-12 text-zinc-600 mb-4" />
             <p className="text-4xl font-bold text-gray-900 dark:text-white">
               {stats.avgResolutionTimeHours ? stats.avgResolutionTimeHours.toFixed(1) : '—'}
             </p>

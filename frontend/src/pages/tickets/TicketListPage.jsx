@@ -101,7 +101,7 @@ export default function TicketListPage() {
         {!isTechnician && (
           <Link
             to="/tickets/create"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-full text-sm font-medium hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/25"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-full text-sm font-medium transition-all shadow-sm"
           >
             <Plus className="h-4 w-4" />
             New Ticket
@@ -213,7 +213,7 @@ export default function TicketListPage() {
                     key={ticket.id}
                     className={`border-l-4 ${ROW_BORDER_MAP[ticket.status] || 'border-l-transparent'} hover:bg-gray-50/50 dark:hover:bg-gray-800/30 group transition-colors`}
                   >
-                    <td className="px-4 py-3 text-sm font-mono font-semibold text-indigo-600 dark:text-indigo-400">{ticket.ticketNumber ?? `TKT-${String(ticket.id).padStart(4, '0')}`}</td>
+                    <td className="px-4 py-3 text-sm font-mono font-semibold text-zinc-700 dark:text-zinc-300">{ticket.ticketNumber ?? `TKT-${String(ticket.id).padStart(4, '0')}`}</td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{ticket.category ?? '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs" title={ticket.description ?? ''}>
                       <span className="line-clamp-2">{truncate(ticket.description, 60)}</span>
@@ -227,7 +227,7 @@ export default function TicketListPage() {
                     <td className="px-4 py-3">
                       <Link
                         to={`/tickets/${ticket.id}`}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 opacity-0 group-hover:opacity-100 transition-all"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-zinc-700 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 opacity-0 group-hover:opacity-100 transition-all"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Link>

@@ -94,7 +94,7 @@ function AvailabilityTimeline({ calendarEvents, loading, selectedStart, selected
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <Monitor className="h-4 w-4 text-indigo-500" />
+        <Monitor className="h-4 w-4 text-zinc-600" />
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
           Availability Preview
         </h3>
@@ -162,7 +162,7 @@ function AvailabilityTimeline({ calendarEvents, loading, selectedStart, selected
           </span>
           <span className="flex items-center gap-1 ml-4 border-l border-gray-200 dark:border-gray-700 pl-4">
             <span className="inline-block w-3 h-3 rounded-[2px] bg-indigo-500/10 border-t border-indigo-500" style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(99, 102, 241, 0.4) 2px, rgba(99, 102, 241, 0.4) 4px)` }} />
-            <span className="text-indigo-600 dark:text-indigo-400 font-medium">Your Selection</span>
+            <span className="text-zinc-700 dark:text-zinc-300 font-medium">Your Selection</span>
           </span>
         </div>
       </div>
@@ -201,7 +201,7 @@ function SuggestionPanel({ suggestions, onPick, loading }) {
               onClick={() => onPick(s)}
               className="flex items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-700/50 bg-white dark:bg-gray-900 px-4 py-3 text-left hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md transition-all group"
             >
-              <Sparkles className="h-4 w-4 text-indigo-400 group-hover:text-indigo-500 shrink-0" />
+              <Sparkles className="h-4 w-4 text-indigo-400 group-hover:text-zinc-600 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
                   {formatDate(st)}
@@ -224,11 +224,11 @@ function MapUnit({ resource, selected, onSelect }) {
       type="button"
       onClick={() => onSelect(resource.id)}
       className={`relative rounded-xl border-2 transition-all p-3 text-left flex flex-col justify-between group overflow-hidden ${
-        selected ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.2)] scale-[1.02] z-20' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80 hover:border-indigo-300 dark:hover:border-indigo-600 hover:scale-[1.02] hover:-translate-y-0.5 shadow-sm hover:z-20'
+        selected ? 'border-indigo-500 bg-zinc-100 dark:bg-zinc-800 shadow-[0_0_20px_rgba(99,102,241,0.2)] scale-[1.02] z-20' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80 hover:border-indigo-300 dark:hover:border-indigo-600 hover:scale-[1.02] hover:-translate-y-0.5 shadow-sm hover:z-20'
       }`}
     >
       <div className="flex justify-between items-start mb-2 z-10 gap-2">
-         <div className={`font-bold leading-tight ${selected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-800 dark:text-gray-200'}`}>
+         <div className={`font-bold leading-tight ${selected ? 'text-zinc-700 dark:text-zinc-300' : 'text-gray-800 dark:text-gray-200'}`}>
             {resource.name}
          </div>
          <div className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-300 dark:border-gray-600 group-hover:border-indigo-400'}`}>
@@ -242,7 +242,7 @@ function MapUnit({ resource, selected, onSelect }) {
       </div>
       
       {selected && (
-         <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-gradient-to-br from-indigo-200 to-indigo-500 opacity-20 rounded-full blur-xl"></div>
+         <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-zinc-300 dark:bg-zinc-700 opacity-10 rounded-full blur-xl"></div>
       )}
     </button>
   );
@@ -453,7 +453,7 @@ export default function BookingCreatePage() {
   };
 
   const inputBase =
-    'w-full px-4 py-2.5 rounded-xl border bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-shadow';
+    'w-full px-4 py-2.5 rounded-xl border bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 transition-shadow';
   const inputError = 'border-red-500 dark:border-red-500';
   const inputNormal = 'border-gray-200 dark:border-gray-700';
 
@@ -469,7 +469,7 @@ export default function BookingCreatePage() {
 
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25">
+          <div className="p-2.5 rounded-xl bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 shadow-sm">
             <CalendarPlus className="h-6 w-6" />
           </div>
           <div>
@@ -487,14 +487,14 @@ export default function BookingCreatePage() {
               <button
                 type="button"
                 onClick={() => setViewMode('FLOOR_PLAN')}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${viewMode === 'FLOOR_PLAN' ? 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${viewMode === 'FLOOR_PLAN' ? 'bg-white dark:bg-gray-900 text-zinc-700 dark:text-zinc-300 shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
               >
                 <Map className="h-4 w-4" /> Map View
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('LIST')}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${viewMode === 'LIST' ? 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${viewMode === 'LIST' ? 'bg-white dark:bg-gray-900 text-zinc-700 dark:text-zinc-300 shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
               >
                 <List className="h-4 w-4" /> List View
               </button>
@@ -535,7 +535,7 @@ export default function BookingCreatePage() {
                          onClick={() => update('resourceId', String(r.id))}
                          className={`flex items-start gap-3 p-4 rounded-xl border-2 transition-all text-left group ${
                             String(form.resourceId) === String(r.id)
-                               ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.15)] scale-[1.01]' 
+                               ? 'border-indigo-500 bg-zinc-100 dark:bg-zinc-800 shadow-[0_0_15px_rgba(99,102,241,0.15)] scale-[1.01]' 
                                : 'border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-white dark:hover:bg-gray-800'
                          }`}
                       >
@@ -656,7 +656,7 @@ export default function BookingCreatePage() {
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
             >
               {submitting ? (
                 <>

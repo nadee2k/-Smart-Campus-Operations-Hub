@@ -112,7 +112,7 @@ const activityIcons = {
 function Spinner() {
   return (
     <div className="flex items-center justify-center py-12">
-      <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+      <Loader2 className="h-6 w-6 animate-spin text-zinc-600" />
     </div>
   );
 }
@@ -136,7 +136,7 @@ function StatCard({ label, value, icon: Icon, iconColor, alert, to }) {
       className={`bg-white dark:bg-gray-900 rounded-2xl border ${
         alert ? 'border-red-300 dark:border-red-800' : 'border-gray-200 dark:border-gray-800'
       } p-5 flex items-start justify-between transition-colors ${
-        to ? 'hover:border-indigo-300 dark:hover:border-indigo-700 cursor-pointer' : ''
+        to ? 'hover:border-zinc-400 dark:hover:border-zinc-600 cursor-pointer' : ''
       }`}
     >
       <div>
@@ -214,11 +214,24 @@ function AdminDashboard({ user }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          {getGreeting()}, {user?.name?.split(' ')[0]}
-        </h1>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">Operations Command Center</p>
+      <div className="relative rounded-2xl overflow-hidden bg-gray-900 border border-gray-200 dark:border-gray-800 p-8 sm:p-10 mb-2">
+        <img 
+          src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2000" 
+          alt="Abstract Architecture" 
+          className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay grayscale"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
+        <div className="relative z-10 flex flex-col items-start">
+          <span className="px-3 py-1 bg-white/10 text-white backdrop-blur-md rounded-full text-xs font-semibold tracking-wider uppercase mb-3 border border-white/20">
+            Operations Command
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-medium text-white tracking-tight drop-shadow-md">
+            {getGreeting()}, {user?.name?.split(' ')[0]}.
+          </h1>
+          <p className="mt-2 text-gray-300 font-light max-w-xl text-lg drop-shadow-sm">
+            Here's what's happening across the campus right now.
+          </p>
+        </div>
       </div>
 
       {/* KPI Row */}
@@ -227,7 +240,7 @@ function AdminDashboard({ user }) {
           label="Pending Bookings"
           value={pendingCount}
           icon={CalendarDays}
-          iconColor="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400"
+          iconColor="bg-zinc-100 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300"
           to="/bookings/admin"
         />
         <StatCard
@@ -248,7 +261,7 @@ function AdminDashboard({ user }) {
           label="Total Users"
           value={totalUsers}
           icon={Users}
-          iconColor="bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400"
+          iconColor="bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400"
         />
         <StatCard
           label="Avg Satisfaction"
@@ -268,7 +281,7 @@ function AdminDashboard({ user }) {
             </h2>
             <Link
               to="/admin/activity"
-              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+              className="text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:underline flex items-center gap-1"
             >
               View all <ArrowRight className="h-3 w-3" />
             </Link>
@@ -281,8 +294,8 @@ function AdminDashboard({ user }) {
                 const Icon = activityIcons[a.action] || activityIcons.DEFAULT;
                 return (
                   <div key={a.id ?? i} className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <div className="h-8 w-8 shrink-0 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
-                      <Icon className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
+                    <div className="h-8 w-8 shrink-0 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                      <Icon className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
@@ -307,7 +320,7 @@ function AdminDashboard({ user }) {
             </h2>
             <Link
               to="/bookings/admin"
-              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+              className="text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:underline flex items-center gap-1"
             >
               View all <ArrowRight className="h-3 w-3" />
             </Link>
@@ -365,23 +378,23 @@ function AdminDashboard({ user }) {
       {/* Quick Nav */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'User Management', desc: 'Manage campus accounts', icon: Users, to: '/admin/users', gradient: 'from-indigo-600 to-violet-600' },
-          { label: 'Analytics', desc: 'View detailed reports', icon: BarChart3, to: '/analytics', gradient: 'from-violet-600 to-purple-600' },
-          { label: 'Activity Feed', desc: 'Full audit trail', icon: Activity, to: '/admin/activity', gradient: 'from-purple-600 to-fuchsia-600' },
+          { label: 'User Management', desc: 'Manage campus accounts', icon: Users, to: '/admin/users', color: 'bg-black dark:bg-white text-white dark:text-black' },
+          { label: 'Analytics', desc: 'View detailed reports', icon: BarChart3, to: '/analytics', color: 'bg-gray-800 dark:bg-gray-200 text-white dark:text-black' },
+          { label: 'Activity Feed', desc: 'Full audit trail', icon: Activity, to: '/admin/activity', color: 'bg-gray-600 dark:bg-gray-400 text-white dark:text-black' },
         ].map((nav) => {
           const Icon = nav.icon;
           return (
             <Link
               key={nav.label}
               to={nav.to}
-              className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
+              className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 hover:border-black dark:hover:border-white transition-colors"
             >
               <div className="flex items-center gap-4">
-                <div className={`h-11 w-11 shrink-0 rounded-xl bg-gradient-to-r ${nav.gradient} flex items-center justify-center text-white shadow-lg`}>
+                <div className={`h-11 w-11 shrink-0 rounded-xl ${nav.color} flex items-center justify-center shadow-sm border border-transparent dark:border-gray-700`}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  <p className="font-semibold text-gray-900 dark:text-white group-hover:text-zinc-700 dark:group-hover:text-indigo-400 transition-colors">
                     {nav.label}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{nav.desc}</p>
@@ -448,11 +461,24 @@ function TechnicianDashboard({ user }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          {getGreeting()}, {user?.name?.split(' ')[0]}
-        </h1>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">My Work Queue</p>
+      <div className="relative rounded-2xl overflow-hidden bg-gray-900 border border-gray-200 dark:border-gray-800 p-8 sm:p-10 mb-2">
+        <img 
+          src="https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=2000" 
+          alt="Workshop tools" 
+          className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay grayscale"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
+        <div className="relative z-10 flex flex-col items-start">
+          <span className="px-3 py-1 bg-white/10 text-white backdrop-blur-md rounded-full text-xs font-semibold tracking-wider uppercase mb-3 border border-white/20">
+            Work Queue
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-medium text-white tracking-tight drop-shadow-md">
+            {getGreeting()}, {user?.name?.split(' ')[0]}.
+          </h1>
+          <p className="mt-2 text-gray-300 font-light max-w-xl text-lg drop-shadow-sm">
+            Here are your assigned tickets and service tasks.
+          </p>
+        </div>
       </div>
 
       {/* Stats Row */}
@@ -461,7 +487,7 @@ function TechnicianDashboard({ user }) {
           label="My Assigned (Open)"
           value={stats.assigned}
           icon={Wrench}
-          iconColor="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400"
+          iconColor="bg-zinc-100 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300"
         />
         <StatCard
           label="Resolved This Week"
@@ -497,7 +523,7 @@ function TechnicianDashboard({ user }) {
           </h2>
           <Link
             to="/tickets"
-            className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+            className="text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:underline flex items-center gap-1"
           >
             View all <ArrowRight className="h-3 w-3" />
           </Link>
@@ -514,7 +540,7 @@ function TechnicianDashboard({ user }) {
                 <Link
                   key={t.id}
                   to={`/tickets/${t.id}`}
-                  className="block p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors"
+                  className="block p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -628,18 +654,31 @@ function UserDashboard({ user }) {
   if (loading) return <Spinner />;
 
   const quickActions = [
-    { label: 'Book a Room', desc: 'Reserve campus spaces', icon: CalendarDays, to: '/bookings/create', gradient: 'from-indigo-500 to-violet-500' },
-    { label: 'Report Issue', desc: 'Submit a maintenance ticket', icon: AlertTriangle, to: '/tickets/create', gradient: 'from-amber-500 to-orange-500' },
-    { label: 'Browse Resources', desc: 'Explore available facilities', icon: Search, to: '/resources', gradient: 'from-emerald-500 to-teal-500' },
+    { label: 'Book a Room', desc: 'Reserve campus spaces', icon: CalendarDays, to: '/bookings/create', color: 'bg-black dark:bg-white text-white dark:text-black' },
+    { label: 'Report Issue', desc: 'Submit a maintenance ticket', icon: AlertTriangle, to: '/tickets/create', color: 'bg-gray-800 dark:bg-gray-200 text-white dark:text-black' },
+    { label: 'Browse Resources', desc: 'Explore available facilities', icon: Search, to: '/resources', color: 'bg-gray-600 dark:bg-gray-400 text-white dark:text-black' },
   ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          {getGreeting()}, {user?.name?.split(' ')[0]}
-        </h1>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">My Campus Hub</p>
+      <div className="relative rounded-2xl overflow-hidden bg-gray-900 border border-gray-200 dark:border-gray-800 p-8 sm:p-10 mb-2">
+        <img 
+          src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=2000" 
+          alt="Modern Library" 
+          className="absolute inset-0 w-full h-full object-cover opacity-70 mix-blend-overlay grayscale"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
+        <div className="relative z-10 flex flex-col items-start">
+          <span className="px-3 py-1 bg-white/10 text-white backdrop-blur-md rounded-full text-xs font-semibold tracking-wider uppercase mb-3 border border-white/20">
+            Campus Hub
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-medium text-white tracking-tight drop-shadow-md">
+            {getGreeting()}, {user?.name?.split(' ')[0]}.
+          </h1>
+          <p className="mt-2 text-gray-300 font-light max-w-xl text-lg drop-shadow-sm">
+            Ready to explore facilities or report an issue?
+          </p>
+        </div>
       </div>
 
       {/* Quick Actions */}
@@ -650,12 +689,12 @@ function UserDashboard({ user }) {
             <Link
               key={action.label}
               to={action.to}
-              className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all hover:shadow-lg hover:shadow-indigo-500/5"
+              className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 hover:border-black dark:hover:border-white transition-all hover:-translate-y-0.5 shadow-sm"
             >
-              <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${action.gradient} flex items-center justify-center text-white shadow-lg mb-3`}>
+              <div className={`h-12 w-12 rounded-xl ${action.color} flex items-center justify-center border border-transparent dark:border-gray-700 shadow-sm mb-3`}>
                 <Icon className="h-6 w-6" />
               </div>
-              <p className="font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <p className="font-semibold text-gray-900 dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
                 {action.label}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{action.desc}</p>
@@ -674,7 +713,7 @@ function UserDashboard({ user }) {
             </h2>
             <Link
               to="/bookings"
-              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+              className="text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:underline flex items-center gap-1"
             >
               View all <ArrowRight className="h-3 w-3" />
             </Link>
@@ -689,10 +728,10 @@ function UserDashboard({ user }) {
                   <Link
                     key={b.id}
                     to={`/bookings/${b.id}`}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
                   >
-                    <div className="h-10 w-10 shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
-                      <CalendarDays className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
+                    <div className="h-10 w-10 shrink-0 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                      <CalendarDays className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -705,7 +744,7 @@ function UserDashboard({ user }) {
                     <div className="shrink-0 text-right">
                       <StatusBadge status={b.status} />
                       {countdown && countdown !== 'started' && (
-                        <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5 font-medium">
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5 font-medium">
                           {countdown}
                         </p>
                       )}
@@ -725,7 +764,7 @@ function UserDashboard({ user }) {
             </h2>
             <Link
               to="/tickets"
-              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+              className="text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:underline flex items-center gap-1"
             >
               View all <ArrowRight className="h-3 w-3" />
             </Link>
@@ -762,11 +801,11 @@ function UserDashboard({ user }) {
       {/* Notification Summary */}
       <Link
         to="/notifications"
-        className="block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors group"
+        className="block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors group"
       >
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white shadow-lg">
+            <div className="h-12 w-12 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black flex items-center justify-center text-white shadow-lg">
               <Bell className="h-6 w-6" />
             </div>
             {unreadCount > 0 && (
@@ -776,14 +815,14 @@ function UserDashboard({ user }) {
             )}
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+            <p className="font-semibold text-gray-900 dark:text-white group-hover:text-zinc-700 dark:group-hover:text-indigo-400 transition-colors">
               Notifications
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'All caught up!'}
             </p>
           </div>
-          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-500 transition-colors" />
+          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-zinc-600 transition-colors" />
         </div>
       </Link>
     </div>

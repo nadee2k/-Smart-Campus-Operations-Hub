@@ -21,7 +21,7 @@ const NOTIF_ICON_MAP = {
   BOOKING_REJECTED: { icon: CalendarX2, color: 'text-red-500 bg-red-50 dark:bg-red-900/30' },
   TICKET_ASSIGNED: { icon: Wrench, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/30' },
   TICKET_STATUS_CHANGED: { icon: ArrowRightLeft, color: 'text-violet-500 bg-violet-50 dark:bg-violet-900/30' },
-  NEW_COMMENT: { icon: MessageSquare, color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' },
+  NEW_COMMENT: { icon: MessageSquare, color: 'text-zinc-600 bg-zinc-100 dark:bg-zinc-800' },
   SLA_BREACH: { icon: Wrench, color: 'text-red-500 bg-red-50 dark:bg-red-900/30' },
 };
 
@@ -119,7 +119,7 @@ export default function NotificationPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
         <button
           onClick={markAllRead}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-full hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/25"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-full transition-all shadow-sm"
         >
           <CheckCheck className="h-4 w-4" />
           Mark all read

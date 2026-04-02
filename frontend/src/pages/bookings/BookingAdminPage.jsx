@@ -8,8 +8,7 @@ import EmptyState from '../../components/common/EmptyState';
 import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
 import toast from 'react-hot-toast';
-import { Check, X, Search, Filter } from 'lucide-react';
-import { resourceService } from '../../services/resourceService';
+import { Check, X } from 'lucide-react';
 
 const STATUS_TABS = [
   { value: 'ALL', label: 'All' },
@@ -52,9 +51,6 @@ export default function BookingAdminPage() {
   const [actionModal, setActionModal] = useState({
     open: false, type: null, booking: null, adminComment: '',
   });
-  const [searchQuery, setSearchQuery] = useState('');
-  const [resourceFilter, setResourceFilter] = useState('');
-  const [resources, setResources] = useState([]);
 
   const fetchBookings = () => {
     setLoading(true);
@@ -76,13 +72,6 @@ export default function BookingAdminPage() {
     fetchBookings();
   }, [page, statusFilter, isAdmin]);
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    resourceService.getAll({ size: 100 })
-      .then(res => setResources(res.data.content || res.data || []))
-      .catch(() => {});
-  }, [isAdmin]);
-
   const openApproveModal = (booking) => setActionModal({ open: true, type: 'approve', booking, adminComment: '' });
   const openRejectModal = (booking) => setActionModal({ open: true, type: 'reject', booking, adminComment: '' });
   const closeModal = () => setActionModal({ open: false, type: null, booking: null, adminComment: '' });
@@ -101,54 +90,24 @@ export default function BookingAdminPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Manage Bookings</h1>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Manage Bookings</h1>
 
-      {/* Unified Filter Bar */}
-      <div className="flex flex-col md:flex-row gap-3 mb-6">
-        <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-x-auto h-[42px] flex-shrink-0">
+        {/* Tab bar wrapped in a sleek pill container */}
+        <div className="flex items-center p-1 bg-white dark:bg-gray-900 rounded-full border border-gray-200 dark:border-gray-800 shadow-sm overflow-x-auto w-full lg:w-auto hide-scrollbar">
           {STATUS_TABS.map((tab) => (
             <button
               key={tab.value}
               onClick={() => { setStatusFilter(tab.value); setPage(0); }}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
                 statusFilter === tab.value
-                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
               }`}
             >
               {tab.label}
             </button>
           ))}
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-2 md:max-w-md w-full ml-auto">
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search user, purpose, or resource..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 h-[42px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm"
-            />
-          </div>
-          <div className="relative sm:w-44 flex-shrink-0">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Filter className="h-4 w-4 text-gray-400" />
-            </div>
-            <select
-              value={resourceFilter}
-              onChange={(e) => setResourceFilter(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 h-[42px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer appearance-none shadow-sm"
-            >
-              <option value="">All Resources</option>
-              {resources.map(res => (
-                <option key={res.id} value={res.id}>{res.name}</option>
-              ))}
-            </select>
-          </div>
         </div>
       </div>
 
@@ -171,14 +130,7 @@ export default function BookingAdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {bookings
-                  .filter(b => !resourceFilter || Number(b.resource?.id || b.resourceId) === Number(resourceFilter))
-                  .filter(b => !searchQuery || 
-                    (b.purpose || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-                    (b.resource?.name || b.resourceName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    (b.user?.name || b.userName || '').toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-                  .map((booking) => (
+                {bookings.map((booking) => (
                   <tr
                     key={booking.id}
                     className={`border-l-4 ${ROW_BORDER_MAP[booking.status] || 'border-l-transparent'} hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors`}
@@ -188,7 +140,7 @@ export default function BookingAdminPage() {
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       <span>{formatDateTimeRange(booking.startTime, booking.endTime)}</span>
                       {booking.startTime && booking.endTime && (
-                        <span className="ml-2 text-xs font-medium text-indigo-500 dark:text-indigo-400">
+                        <span className="ml-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
                           ({formatDuration(booking.startTime, booking.endTime)})
                         </span>
                       )}
@@ -236,7 +188,7 @@ export default function BookingAdminPage() {
                 value={actionModal.adminComment}
                 onChange={(e) => setActionModal((prev) => ({ ...prev, adminComment: e.target.value }))}
                 rows={3}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-zinc-400 focus:border-transparent outline-none transition"
                 placeholder="Add a comment for the user..."
               />
             </div>

@@ -6,9 +6,9 @@ import toast from 'react-hot-toast';
 import { Eye, EyeOff, LogIn, UserPlus, Shield, Wrench, GraduationCap } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
-  { email: 'admin@uniops.edu', password: 'password123', label: 'Admin', icon: Shield, color: 'from-red-500 to-rose-600' },
-  { email: 'tech@uniops.edu', password: 'password123', label: 'Technician', icon: Wrench, color: 'from-amber-500 to-orange-600' },
-  { email: 'john@uniops.edu', password: 'password123', label: 'Student', icon: GraduationCap, color: 'from-emerald-500 to-teal-600' },
+  { email: 'admin@uniops.edu', password: 'password123', label: 'Admin', icon: Shield, color: 'bg-black dark:bg-white text-white dark:text-black' },
+  { email: 'tech@uniops.edu', password: 'password123', label: 'Technician', icon: Wrench, color: 'bg-gray-800 dark:bg-gray-200 text-white dark:text-black' },
+  { email: 'john@uniops.edu', password: 'password123', label: 'Student', icon: GraduationCap, color: 'bg-gray-600 dark:bg-gray-400 text-white dark:text-black' },
 ];
 
 export default function LoginPage() {
@@ -68,32 +68,32 @@ export default function LoginPage() {
 
   const strength = tab === 'register' ? getPasswordStrength(password) : null;
 
-  const inputCls = 'w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition';
+  const inputCls = 'w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-zinc-400 focus:border-transparent outline-none transition';
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left: Branding Panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-72 h-72 rounded-full bg-white/20 blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
-        </div>
+      {/* Left: Branding Panel (Minimalist Architectural Photo) */}
+      <div className="hidden lg:block lg:w-1/2 relative bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+        <img 
+          src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=2000" 
+          alt="Modern abstract architecture" 
+          className="absolute inset-0 w-full h-full object-cover opacity-90"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
+        
+        <div className="relative flex flex-col justify-between h-full p-12">
+          <div className="flex items-center gap-3">
+            <UniOpsLogo className="h-10 w-10 text-white drop-shadow-lg" />
+            <span className="text-2xl font-bold text-white tracking-tight drop-shadow-md">UniOps</span>
+          </div>
 
-        <div className="relative flex flex-col justify-center items-center w-full p-12 text-center">
-          <UniOpsLogo className="h-20 w-20 mb-6 drop-shadow-2xl" />
-          <h1 className="text-4xl font-bold text-white mb-3">UniOps</h1>
-          <p className="text-lg text-white/80 max-w-sm">University Operations Hub — manage facilities, bookings, and maintenance in one place.</p>
-          <div className="mt-12 grid grid-cols-3 gap-6 text-center">
-            {[
-              { n: '100+', label: 'Resources' },
-              { n: '500+', label: 'Bookings' },
-              { n: '99%', label: 'Uptime' },
-            ].map((s) => (
-              <div key={s.label}>
-                <p className="text-2xl font-bold text-white">{s.n}</p>
-                <p className="text-sm text-white/60">{s.label}</p>
-              </div>
-            ))}
+          <div className="pb-8">
+            <h1 className="text-4xl lg:text-5xl font-medium text-white tracking-tight mb-4 drop-shadow-sm">
+              Campus operations,<br />elegantly simplified.
+            </h1>
+            <p className="text-lg text-gray-300 max-w-md font-light drop-shadow-sm">
+              Manage facilities, track maintenance, and handle bookings—all in one quiet, focused workspace.
+            </p>
           </div>
         </div>
       </div>
@@ -104,7 +104,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-2">
             <UniOpsLogo className="h-12 w-12 mx-auto mb-2" />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">UniOps</h1>
+            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">UniOps</h1>
           </div>
 
           {/* Welcome text */}
@@ -170,7 +170,7 @@ export default function LoginPage() {
                 </div>
               )}
             </div>
-            <button type="submit" disabled={submitting} className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/25">
+            <button type="submit" disabled={submitting} className="w-full py-2.5 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 font-semibold rounded-xl transition-all shadow-sm">
               {submitting ? 'Please wait...' : tab === 'login' ? 'Sign In' : 'Create Account'}
             </button>
           </form>
@@ -210,7 +210,7 @@ export default function LoginPage() {
                     disabled={submitting}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors disabled:opacity-50"
                   >
-                    <div className={`h-6 w-6 rounded-lg bg-gradient-to-br ${account.color} flex items-center justify-center text-white`}>
+                    <div className={`h-6 w-6 rounded-lg ${account.color} flex items-center justify-center text-white`}>
                       <Icon className="h-3 w-3" />
                     </div>
                     <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{account.label}</span>

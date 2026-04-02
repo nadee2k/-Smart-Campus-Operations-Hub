@@ -3,8 +3,14 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --color-primary: #6366f1;
-  --color-primary-dark: #4f46e5;
+  --color-primary: #18181B;
+  --color-primary-dark: #fafafa;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @keyframes pulse-ring {
@@ -17,12 +23,21 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .animate-pulse-ring {
   animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }
 
 .animate-slide-up {
   animation: slide-up 0.2s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out both;
 }
 
 @utility scrollbar-hide {

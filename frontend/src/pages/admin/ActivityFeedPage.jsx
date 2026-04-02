@@ -16,10 +16,10 @@ const FILTERS = [
 ];
 
 const ICON_MAP = {
-  BOOKING: { icon: CalendarDays, gradient: 'from-indigo-500 to-violet-500' },
-  TICKET: { icon: Wrench, gradient: 'from-amber-500 to-orange-500' },
-  RESOURCE: { icon: Building2, gradient: 'from-emerald-500 to-teal-500' },
-  USER: { icon: User, gradient: 'from-rose-500 to-pink-500' },
+  BOOKING: { icon: CalendarDays, bg: 'bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-800' },
+  TICKET: { icon: Wrench, bg: 'bg-zinc-600 dark:bg-zinc-400 text-white dark:text-zinc-900' },
+  RESOURCE: { icon: Building2, bg: 'bg-zinc-700 dark:bg-zinc-300 text-white dark:text-zinc-900' },
+  USER: { icon: User, bg: 'bg-zinc-500 dark:bg-zinc-500 text-white dark:text-zinc-100' },
 };
 
 function getIconConfig(actionType) {
@@ -82,7 +82,7 @@ export default function ActivityFeedPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold">
-          <span className="bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">
+          <span className="text-zinc-900 dark:text-white">
             Activity Feed
           </span>
         </h1>
@@ -129,7 +129,7 @@ export default function ActivityFeedPage() {
                     className="relative flex items-start gap-4 p-4 sm:pl-0 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 sm:border-0 sm:bg-transparent sm:dark:bg-transparent sm:rounded-none hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors group"
                   >
                     {/* Icon */}
-                    <div className={`relative z-10 h-11 w-11 shrink-0 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white shadow-lg`}>
+                    <div className={`relative z-10 h-11 w-11 shrink-0 rounded-xl ${config.bg} flex items-center justify-center text-white shadow-lg`}>
                       <Icon className="h-5 w-5" />
                     </div>
 
@@ -145,7 +145,7 @@ export default function ActivityFeedPage() {
                           {(entry.targetName || entry.targetLink) && (
                             <p className="mt-1 text-sm">
                               {entry.targetLink ? (
-                                <Link to={entry.targetLink} className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+                                <Link to={entry.targetLink} className="text-zinc-700 dark:text-zinc-300 hover:underline font-medium">
                                   {entry.targetName ?? 'View'}
                                 </Link>
                               ) : (

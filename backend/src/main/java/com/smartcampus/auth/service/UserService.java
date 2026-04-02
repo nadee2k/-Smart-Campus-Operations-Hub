@@ -24,6 +24,8 @@ public interface UserService {
 
     User registerLocalUser(String email, String password, String name);
 
+    UserResponse createByAdmin(String email, String password, String name, Role role);
+
     Page<UserResponse> findAll(Pageable pageable, String search, Role roleFilter);
 
     UserResponse updateRole(Long userId, Role role);
