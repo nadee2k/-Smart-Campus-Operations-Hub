@@ -90,23 +90,25 @@ export default function BookingAdminPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Manage Bookings</h1>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Manage Bookings</h1>
 
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl mb-6 overflow-x-auto">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => { setStatusFilter(tab.value); setPage(0); }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-              statusFilter === tab.value
-                ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {/* Tab bar wrapped in a sleek pill container */}
+        <div className="flex items-center p-1 bg-white dark:bg-gray-900 rounded-full border border-gray-200 dark:border-gray-800 shadow-sm overflow-x-auto w-full lg:w-auto hide-scrollbar">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => { setStatusFilter(tab.value); setPage(0); }}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
+                statusFilter === tab.value
+                  ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (

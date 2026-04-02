@@ -39,6 +39,13 @@ public class UserController {
         return ResponseEntity.ok(userService.getProfile(id));
     }
 
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> createByAdmin(@RequestBody Map<String, String> body) {
+        Role role = body.get("role") != null ? Role.valueOf(body.get("role")) : Role.USER;
+        return ResponseEntity.ok(userService.createByAdmin(body.get("email"), body.get("password"), body.get("name"), role));
+    }
+
     @PatchMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> updateRole(@PathVariable Long id, @RequestBody Map<String, String> body) {

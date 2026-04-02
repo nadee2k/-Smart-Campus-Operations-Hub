@@ -105,6 +105,22 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    public UserResponse createByAdmin(String email, String password, String name, Role role) {
+        if (userRepository.existsByEmail(email)) {
+            throw new BadRequestException("An account with this email already exists");
+        }
+        User user = new User();
+        user.setEmail(email);
+        user.setName(name);
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setProvider("LOCAL");
+        user.setRole(role != null ? role : Role.USER);
+        User saved = userRepository.save(user);
+        return toResponse(saved);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Page<UserResponse> findAll(Pageable pageable, String search, Role roleFilter) {
         String roleStr = roleFilter != null ? roleFilter.name() : null;

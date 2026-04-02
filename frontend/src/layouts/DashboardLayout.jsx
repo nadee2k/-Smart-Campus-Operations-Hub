@@ -1,13 +1,14 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Fragment } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Menu as HeadlessMenu, Transition } from '@headlessui/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import NotificationBell from '../components/notifications/NotificationBell';
 import UniOpsLogo from '../components/common/UniOpsLogo';
 import {
   LayoutDashboard, Building2, CalendarDays, Wrench, Bell,
-  BarChart3, LogOut, Menu, X, Sun, Moon, ChevronDown, User,
-  Users, Activity, ClipboardList, Calendar, QrCode
+  BarChart3, LogOut, Menu as MenuIcon, X, Sun, Moon, ChevronDown, User,
+  Users, Activity, ClipboardList, Calendar, QrCode, Settings
 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -20,19 +21,24 @@ export default function DashboardLayout() {
 
   const isUser = !isAdmin && !isTechnician;
 
-  const navItems = [
+  const mainNavItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: true },
     { to: '/technician/workspace', label: 'My Workspace', icon: ClipboardList, show: isTechnician },
     { to: '/resources', label: 'Resources', icon: Building2, show: true },
     { to: isAdmin ? '/bookings/admin' : '/bookings', label: 'Bookings', icon: CalendarDays, show: isAdmin || isUser },
     { to: '/bookings/calendar', label: 'Calendar', icon: Calendar, show: isUser },
-    { to: '/bookings/scanner', label: 'Scanner', icon: QrCode, show: isAdmin },
     { to: '/tickets', label: 'Tickets', icon: Wrench, show: true },
+    { to: '/notifications', label: 'Alerts', icon: Bell, show: true },
+  ].filter((item) => item.show);
+
+  const adminNavItems = [
+    { to: '/bookings/scanner', label: 'Scanner', icon: QrCode, show: isAdmin },
     { to: '/admin/users', label: 'Users', icon: Users, show: isAdmin },
     { to: '/admin/activity', label: 'Activity', icon: Activity, show: isAdmin },
-    { to: '/notifications', label: 'Alerts', icon: Bell, show: true },
     { to: '/analytics', label: 'Analytics', icon: BarChart3, show: isAdmin },
   ].filter((item) => item.show);
+  
+  const allNavItems = [...mainNavItems, ...adminNavItems];
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -60,7 +66,7 @@ export default function DashboardLayout() {
 
             {/* Center: Nav links (desktop) */}
             <div className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => {
+              {mainNavItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.to);
                 return (
@@ -78,6 +84,53 @@ export default function DashboardLayout() {
                   </Link>
                 );
               })}
+
+              {/* Admin Tools Dropdown */}
+              {isAdmin && adminNavItems.length > 0 && (
+                <HeadlessMenu as="div" className="relative">
+                  <HeadlessMenu.Button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    adminNavItems.some(i => isActive(i.to))
+                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800'
+                  }`}>
+                    <Settings className="h-3.5 w-3.5" />
+                    Admin
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </HeadlessMenu.Button>
+                  <Transition
+                    as={Fragment}
+                    enter="transition ease-out duration-100"
+                    enterFrom="transform opacity-0 scale-95"
+                    enterTo="transform opacity-100 scale-100"
+                    leave="transition ease-in duration-75"
+                    leaveFrom="transform opacity-100 scale-100"
+                    leaveTo="transform opacity-0 scale-95"
+                  >
+                    <HeadlessMenu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl focus:outline-none p-1.5 z-50">
+                      {adminNavItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <HeadlessMenu.Item key={item.to}>
+                            {({ active }) => (
+                              <Link
+                                to={item.to}
+                                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                                  active || isActive(item.to)
+                                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'
+                                    : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
+                                }`}
+                              >
+                                <Icon className="h-4 w-4" />
+                                {item.label}
+                              </Link>
+                            )}
+                          </HeadlessMenu.Item>
+                        );
+                      })}
+                    </HeadlessMenu.Items>
+                  </Transition>
+                </HeadlessMenu>
+              )}
             </div>
 
             {/* Right: Actions */}
@@ -142,7 +195,7 @@ export default function DashboardLayout() {
                 onClick={() => setMobileOpen(true)}
                 className="md:hidden p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                <MenuIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
           </div>
@@ -177,9 +230,8 @@ export default function DashboardLayout() {
                 </div>
               </div>
 
-              {/* Nav links */}
               <div className="space-y-0.5">
-                {navItems.map((item) => {
+                {mainNavItems.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.to);
                   return (
@@ -198,6 +250,32 @@ export default function DashboardLayout() {
                   );
                 })}
               </div>
+
+              {isAdmin && adminNavItems.length > 0 && (
+                <div className="mt-4">
+                  <p className="px-3 text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Admin Tools</p>
+                  <div className="space-y-0.5">
+                    {adminNavItems.map((item) => {
+                      const Icon = item.icon;
+                      const active = isActive(item.to);
+                      return (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                            active
+                              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'
+                              : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                          }`}
+                        >
+                          <Icon className="h-4.5 w-4.5" />
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-gray-200 dark:border-gray-800 p-3">
