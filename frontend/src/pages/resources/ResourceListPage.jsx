@@ -23,11 +23,19 @@ const STATUS_PILLS = [
 ];
 
 const TYPE_BG_MAP = {
-  LECTURE_HALL: 'bg-indigo-50 dark:bg-indigo-500/10',
-  LAB: 'bg-emerald-50 dark:bg-emerald-500/10',
-  MEETING_ROOM: 'bg-amber-50 dark:bg-amber-500/10',
-  EQUIPMENT: 'bg-violet-50 dark:bg-violet-500/10',
-  OTHER: 'bg-gray-50 dark:bg-gray-800',
+  LECTURE_HALL: 'bg-zinc-100 dark:bg-zinc-800',
+  LAB: 'bg-zinc-100 dark:bg-zinc-800',
+  MEETING_ROOM: 'bg-zinc-100 dark:bg-zinc-800',
+  EQUIPMENT: 'bg-zinc-100 dark:bg-zinc-800',
+  OTHER: 'bg-zinc-100 dark:bg-zinc-800',
+};
+
+const TYPE_IMAGE_MAP = {
+  LECTURE_HALL: 'https://images.unsplash.com/photo-1580537659466-0a9bfa916a54?auto=format&fit=crop&q=80&w=500&h=200',
+  LAB: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&q=80&w=500&h=200',
+  MEETING_ROOM: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=500&h=200',
+  EQUIPMENT: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=500&h=200',
+  OTHER: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&q=80&w=500&h=200',
 };
 
 const getTypeIcon = (type) => {
@@ -94,13 +102,13 @@ export default function ResourceListPage() {
               value={searchInput}
               onChange={(e) => { setSearchInput(e.target.value); setPage(0); }}
               placeholder="Search resources..."
-              className="w-full sm:w-64 pl-10 pr-4 py-2 rounded-full border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+              className="w-full sm:w-64 pl-10 pr-4 py-2 rounded-full border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-zinc-400 focus:border-transparent outline-none transition"
             />
           </div>
           {isAdmin && (
             <Link
               to="/resources/new"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-full text-sm font-medium hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/25"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-full text-sm font-medium transition-all shadow-sm"
             >
               <Plus className="h-4 w-4" />
               New Resource
@@ -117,7 +125,7 @@ export default function ResourceListPage() {
             onClick={() => { setTypeFilter(pill.value); setPage(0); }}
             className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
               typeFilter === pill.value
-                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-400'
+                ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
             }`}
           >
@@ -156,39 +164,38 @@ export default function ResourceListPage() {
                  <Link
                    key={resource.id}
                    to={`/resources/${resource.id}`}
-                   className="group flex flex-col bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1.5 transition-all duration-300"
+                   className="group flex flex-col bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-lg hover:shadow-black/5 hover:-translate-y-1 transition-all duration-300"
                  >
-                   <div className={`h-28 ${bannerBg} relative border-b border-gray-100 dark:border-gray-800/50`}>
-                      <div className="absolute top-4 right-5">
+                   <div className={`h-32 ${bannerBg} relative border-b border-gray-100 dark:border-gray-800/50 overflow-hidden`}>
+                      <img 
+                        src={TYPE_IMAGE_MAP[resource.type] || TYPE_IMAGE_MAP.OTHER} 
+                        alt="" 
+                        className="absolute inset-0 w-full h-full object-cover grayscale opacity-50 dark:opacity-30 group-hover:opacity-70 group-hover:grayscale-0 transition-all duration-500"
+                      />
+                      <div className="absolute top-3 right-4 z-10">
                          <StatusBadge status={resource.status} />
                       </div>
                       {/* Floating Badge */}
-                      <div className="absolute -bottom-6 left-6 h-14 w-14 rounded-2xl bg-white dark:bg-gray-900 shadow-md border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 group-hover:text-indigo-500 transition-colors z-10">
+                      <div className="absolute -bottom-6 left-5 h-13 w-13 rounded-xl bg-white dark:bg-gray-900 shadow-md border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors z-10">
                          {getTypeIcon(resource.type)}
                       </div>
                    </div>
                    
                    {/* Content Block */}
-                   <div className="pt-10 pb-6 px-6 flex-1 flex flex-col bg-white dark:bg-gray-900">
-                     <h3 className="font-extrabold text-xl text-gray-900 dark:text-white truncate mb-6">{resource.name}</h3>
-                     <div className="space-y-4 mt-auto">
-                       <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 font-medium">
-                         <div className="h-9 w-9 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-500/20">
-                            <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                         </div>
+                   <div className="pt-10 pb-5 px-5 flex-1 flex flex-col bg-white dark:bg-gray-900">
+                     <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate mb-4">{resource.name}</h3>
+                     <div className="space-y-3 mt-auto">
+                       <div className="flex items-center gap-2.5 text-sm text-gray-600 dark:text-gray-400">
+                         <Building2 className="h-4 w-4 text-zinc-400 shrink-0" />
                          <span className="truncate">{resource.type?.replace(/_/g, ' ')}</span>
                        </div>
-                       <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 font-medium">
-                         <div className="h-9 w-9 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-500/20">
-                            <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                         </div>
-                         <span>{resource.capacity ?? 0} Seats capacity</span>
+                       <div className="flex items-center gap-2.5 text-sm text-gray-600 dark:text-gray-400">
+                         <Users className="h-4 w-4 text-zinc-400 shrink-0" />
+                         <span>{resource.capacity ?? 0} seats</span>
                        </div>
                        {resource.location && (
-                         <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 font-medium">
-                           <div className="h-9 w-9 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center shrink-0 border border-orange-100 dark:border-orange-500/20">
-                              <MapPin className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                           </div>
+                         <div className="flex items-center gap-2.5 text-sm text-gray-600 dark:text-gray-400">
+                           <MapPin className="h-4 w-4 text-zinc-400 shrink-0" />
                            <span className="truncate">{resource.location}</span>
                          </div>
                        )}

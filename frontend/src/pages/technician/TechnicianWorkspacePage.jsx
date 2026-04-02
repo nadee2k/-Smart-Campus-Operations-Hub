@@ -60,7 +60,7 @@ function truncate(str, len = 100) {
 function StatCard({ icon: Icon, label, value, accent }) {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 flex items-start gap-4">
-      <div className={`h-11 w-11 shrink-0 rounded-xl bg-gradient-to-br ${accent} flex items-center justify-center text-white shadow-lg`}>
+      <div className={`h-11 w-11 shrink-0 rounded-xl ${accent} flex items-center justify-center text-white shadow-lg`}>
         <Icon className="h-5 w-5" />
       </div>
       <div>
@@ -141,7 +141,7 @@ function TicketCard({ ticket, onUpdate }) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+            <span className="text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300">
               {ticket.ticketNumber ?? `TKT-${String(ticket.id).padStart(4, '0')}`}
             </span>
             <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
@@ -153,7 +153,7 @@ function TicketCard({ ticket, onUpdate }) {
             {truncate(ticket.description, 80)}
           </p>
           {ticket.resource?.name && (
-            <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-1">{ticket.resource.name}</p>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">{ticket.resource.name}</p>
           )}
         </div>
 
@@ -178,7 +178,7 @@ function TicketCard({ ticket, onUpdate }) {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-zinc-400 focus:border-transparent"
               >
                 <option value="IN_PROGRESS">In Progress</option>
                 <option value="RESOLVED">Resolved</option>
@@ -188,7 +188,7 @@ function TicketCard({ ticket, onUpdate }) {
               <button
                 onClick={handleStatusUpdate}
                 disabled={saving}
-                className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl text-sm font-medium hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-5 py-2 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-xl text-sm font-medium transition-all shadow-sm disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 Update
@@ -203,7 +203,7 @@ function TicketCard({ ticket, onUpdate }) {
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder="Describe steps taken to resolve this issue…"
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-zinc-400 focus:border-transparent resize-none"
             />
           </div>
         </div>
@@ -283,7 +283,7 @@ export default function TechnicianWorkspacePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-600" />
       </div>
     );
   }
@@ -306,7 +306,7 @@ export default function TechnicianWorkspacePage() {
           icon={ClipboardList}
           label="Assigned Tickets"
           value={stats?.assignedCount ?? activeTickets.length}
-          accent="from-indigo-500 to-violet-500"
+          accent="bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900"
         />
         <StatCard
           icon={CheckCircle2}
@@ -407,7 +407,7 @@ export default function TechnicianWorkspacePage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                      <span className="text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300">
                         {ticket.ticketNumber ?? `TKT-${String(ticket.id).padStart(4, '0')}`}
                       </span>
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">

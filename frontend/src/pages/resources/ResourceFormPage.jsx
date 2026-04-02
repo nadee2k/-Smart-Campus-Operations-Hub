@@ -266,7 +266,7 @@ export default function ResourceFormPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25"
+              className="px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
             >
               {submitting ? 'Saving...' : isEdit ? 'Update' : 'Create'}
             </button>

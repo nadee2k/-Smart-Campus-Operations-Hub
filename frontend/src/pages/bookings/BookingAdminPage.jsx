@@ -101,7 +101,7 @@ export default function BookingAdminPage() {
               onClick={() => { setStatusFilter(tab.value); setPage(0); }}
               className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
                 statusFilter === tab.value
-                  ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25'
+                  ? 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent'
                   : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
               }`}
             >
@@ -140,7 +140,7 @@ export default function BookingAdminPage() {
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       <span>{formatDateTimeRange(booking.startTime, booking.endTime)}</span>
                       {booking.startTime && booking.endTime && (
-                        <span className="ml-2 text-xs font-medium text-indigo-500 dark:text-indigo-400">
+                        <span className="ml-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
                           ({formatDuration(booking.startTime, booking.endTime)})
                         </span>
                       )}
@@ -188,7 +188,7 @@ export default function BookingAdminPage() {
                 value={actionModal.adminComment}
                 onChange={(e) => setActionModal((prev) => ({ ...prev, adminComment: e.target.value }))}
                 rows={3}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-zinc-400 focus:border-transparent outline-none transition"
                 placeholder="Add a comment for the user..."
               />
             </div>

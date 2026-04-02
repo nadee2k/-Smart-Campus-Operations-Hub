@@ -133,15 +133,15 @@ function StatusTimeline({ currentStatus }) {
         return (
           <div key={step} className="flex items-center gap-1">
             {i > 0 && (
-              <div className={`w-8 h-0.5 ${done ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-700'}`} />
+              <div className={`w-8 h-0.5 ${done ? 'bg-zinc-600' : 'bg-gray-300 dark:bg-gray-700'}`} />
             )}
             <div className="flex flex-col items-center gap-1">
               {done ? (
-                <CheckCircle2 className={`h-5 w-5 ${isCurrent ? 'text-indigo-500' : 'text-indigo-400'}`} />
+                <CheckCircle2 className={`h-5 w-5 ${isCurrent ? 'text-zinc-600' : 'text-zinc-400'}`} />
               ) : (
                 <Circle className="h-5 w-5 text-gray-300 dark:text-gray-600" />
               )}
-              <span className={`text-[10px] font-medium whitespace-nowrap ${isCurrent ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}`}>
+              <span className={`text-[10px] font-medium whitespace-nowrap ${isCurrent ? 'text-zinc-700 dark:text-zinc-300' : 'text-gray-500 dark:text-gray-400'}`}>
                 {STATUS_OPTIONS.find((o) => o.value === step)?.label ?? step}
               </span>
             </div>
@@ -396,7 +396,7 @@ export default function TicketDetailPage() {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500 dark:text-gray-400 mb-4">Ticket not found</p>
-        <Link to="/tickets" className="inline-flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:underline">
+        <Link to="/tickets" className="inline-flex items-center gap-2 text-zinc-700 dark:text-zinc-300 hover:underline">
           <ArrowLeft className="h-4 w-4" /> Back to Tickets
         </Link>
       </div>
@@ -417,7 +417,7 @@ export default function TicketDetailPage() {
         <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <span className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-sm font-mono font-bold">
+              <span className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-mono font-bold">
                 {ticket.ticketNumber ?? `TKT-${String(ticket.id).padStart(4, '0')}`}
               </span>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -481,7 +481,7 @@ export default function TicketDetailPage() {
               <button
                 onClick={handleStatusChange}
                 disabled={updatingStatus || statusValue === ticket.status}
-                className="px-4 py-2 text-sm bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-lg hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 transition-all"
+                className="px-4 py-2 text-sm bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-lg disabled:opacity-50 transition-all"
               >
                 {updatingStatus ? 'Updating…' : 'Update Status'}
               </button>
@@ -506,7 +506,7 @@ export default function TicketDetailPage() {
                 <button
                   onClick={handleAssign}
                   disabled={assigning}
-                  className="px-4 py-2 text-sm bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 disabled:opacity-50 transition-all"
+                  className="px-4 py-2 text-sm bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-700 dark:hover:bg-zinc-300 disabled:opacity-50 transition-all"
                 >
                   {assigning ? 'Assigning…' : 'Assign'}
                 </button>
@@ -518,10 +518,10 @@ export default function TicketDetailPage() {
 
       {/* Post-Resolution Feedback Prompt */}
       {isOwner && ticket.status === 'RESOLVED' && !ticket.satisfactionRating && (
-        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-2xl border border-indigo-200 dark:border-indigo-800 p-6">
+        <div className="bg-gradient-to-br from-white to-stone-50 dark:from-zinc-900 dark:to-zinc-950 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
           <div className="flex items-start gap-4">
-            <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0">
-              <Star className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+              <Star className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Was this resolved to your satisfaction?</h3>
@@ -573,7 +573,7 @@ export default function TicketDetailPage() {
             <button
               onClick={handleSaveResolutionNotes}
               disabled={savingNotes}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-lg hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-lg disabled:opacity-50 transition-all"
             >
               <Save className="h-4 w-4" />
               {savingNotes ? 'Saving…' : 'Save'}
@@ -665,7 +665,7 @@ export default function TicketDetailPage() {
               <Link
                 key={t.id}
                 to={`/tickets/${t.id}`}
-                className="block p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
+                className="block p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -703,7 +703,7 @@ export default function TicketDetailPage() {
                   {comment.author?.pictureUrl ? (
                     <img src={comment.author.pictureUrl} alt={comment.author.name} className="w-10 h-10 rounded-full" />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-sm font-medium">
+                    <div className="w-10 h-10 rounded-full bg-gray-900 dark:bg-white text-white dark:text-black flex items-center justify-center text-white text-sm font-medium">
                       {comment.author?.name?.charAt(0) ?? '?'}
                     </div>
                   )}
@@ -729,7 +729,7 @@ export default function TicketDetailPage() {
                     )}
                     {isCommentOwner && !isEditing && (
                       <div className="flex gap-1 ml-auto">
-                        <button onClick={() => startEditComment(comment)} className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded">
+                        <button onClick={() => startEditComment(comment)} className="p-1 text-gray-400 hover:text-zinc-700 dark:hover:text-indigo-400 rounded">
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
                         <button onClick={() => setDeleteCommentModal({ open: true, commentId: comment.id })} className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded">
@@ -788,7 +788,7 @@ export default function TicketDetailPage() {
               className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
                 isInternalNote
                   ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                  : 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white'
+                  : 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent text-white'
               }`}
             >
               {submittingComment ? 'Sending…' : isInternalNote ? 'Add Note' : 'Send'}

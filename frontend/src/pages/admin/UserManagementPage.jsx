@@ -6,23 +6,17 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import Pagination from '../../components/common/Pagination';
 import toast from 'react-hot-toast';
-import { Search, Shield, ChevronDown, Users } from 'lucide-react';
+import { Search, Shield, ChevronDown, Users, Plus } from 'lucide-react';
 
 const ROLES = ['All', 'ADMIN', 'TECHNICIAN', 'USER'];
 
 const ROLE_COLORS = {
   ADMIN: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
   TECHNICIAN: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
-  USER: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-400',
+  USER: 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900',
 };
 
-const AVATAR_GRADIENTS = [
-  'from-indigo-500 to-violet-500',
-  'from-emerald-500 to-teal-500',
-  'from-amber-500 to-orange-500',
-  'from-rose-500 to-pink-500',
-  'from-cyan-500 to-blue-500',
-];
+const AVATAR_GRADIENTS = ['bg-gray-800 dark:bg-gray-200 text-white dark:text-black'];
 
 function avatarGradient(name) {
   const code = (name ?? '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
@@ -43,6 +37,9 @@ export default function UserManagementPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [roleModal, setRoleModal] = useState({ open: false, user: null, newRole: '' });
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'USER' });
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchUsers = useCallback(() => {
     setLoading(true);
@@ -80,18 +77,45 @@ export default function UserManagementPage() {
       .catch(() => toast.error('Failed to update role'));
   };
 
+  const handleAddUser = (e) => {
+    e.preventDefault();
+    if (!newUser.name || !newUser.email || !newUser.password) {
+      toast.error('Name, email, and password are required');
+      return;
+    }
+    setSubmitting(true);
+    userService.create(newUser)
+      .then(() => {
+        toast.success(`User ${newUser.name} created successfully!`);
+        setAddModalOpen(false);
+        setNewUser({ name: '', email: '', password: '', role: 'USER' });
+        fetchUsers();
+      })
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to create user'))
+      .finally(() => setSubmitting(false));
+  };
+
   if (!isAdmin) return null;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">
-          <span className="bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">
-            User Management
-          </span>
-        </h1>
-        <p className="mt-1 text-gray-500 dark:text-gray-400">Manage roles and view user activity across campus.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">
+            <span className="text-zinc-900 dark:text-white">
+              User Management
+            </span>
+          </h1>
+          <p className="mt-1 text-gray-500 dark:text-gray-400">Manage roles and view user activity across campus.</p>
+        </div>
+        <button
+          onClick={() => setAddModalOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-xl text-sm font-medium transition-all shadow-sm shrink-0"
+        >
+          <Plus className="h-4 w-4" />
+          Add User
+        </button>
       </div>
 
       {/* Filters */}
@@ -103,7 +127,7 @@ export default function UserManagementPage() {
             placeholder="Search by name or email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-zinc-400 focus:border-transparent outline-none transition"
           />
         </div>
 
@@ -152,7 +176,7 @@ export default function UserManagementPage() {
                         {u.profilePicture ? (
                           <img src={u.profilePicture} alt="" className="h-9 w-9 rounded-full object-cover" />
                         ) : (
-                          <div className={`h-9 w-9 rounded-full bg-gradient-to-br ${avatarGradient(u.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
+                          <div className={`h-9 w-9 rounded-full ${avatarGradient(u.name)} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
                             {(u.name ?? '?')[0].toUpperCase()}
                           </div>
                         )}
@@ -203,7 +227,7 @@ export default function UserManagementPage() {
         <div className="fixed inset-0 flex items-center justify-center p-4">
           <Dialog.Panel className="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-900 p-6 shadow-xl border border-gray-200 dark:border-gray-800">
             <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white">
+              <div className="h-10 w-10 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black flex items-center justify-center text-white">
                 <Users className="h-5 w-5" />
               </div>
               <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -226,11 +250,95 @@ export default function UserManagementPage() {
               </button>
               <button
                 onClick={handleRoleChange}
-                className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-medium hover:from-indigo-600 hover:to-violet-600 transition-all shadow-lg shadow-indigo-500/25"
+                className="px-4 py-2 text-sm rounded-xl bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent font-medium transition-all shadow-sm"
               >
                 Confirm
               </button>
             </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
+      {/* Add User Modal */}
+      <Dialog open={addModalOpen} onClose={() => !submitting && setAddModalOpen(false)} className="relative z-50">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" aria-hidden="true" />
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 p-6 shadow-xl border border-gray-200 dark:border-gray-800">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-10 w-10 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black flex items-center justify-center text-white shrink-0">
+                <Plus className="h-5 w-5" />
+              </div>
+              <div>
+                <Dialog.Title className="text-lg font-bold text-gray-900 dark:text-white">Create New User</Dialog.Title>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Add an administrator, technician, or standard user.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddUser} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-zinc-400 outline-none transition"
+                  placeholder="John Doe"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-zinc-400 outline-none transition"
+                  placeholder="john@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Temporary Password</label>
+                <input
+                  type="password"
+                  required
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-zinc-400 outline-none transition"
+                  placeholder="Min. 8 characters"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Initial Role</label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-zinc-400 outline-none transition cursor-pointer appearance-none"
+                >
+                  <option value="USER">User (Standard)</option>
+                  <option value="TECHNICIAN">Technician</option>
+                  <option value="ADMIN">Administrator</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAddModalOpen(false)}
+                  disabled={submitting}
+                  className="px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 text-sm rounded-xl bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent font-medium transition-all shadow-sm disabled:opacity-50"
+                >
+                  {submitting ? 'Creating...' : 'Create User'}
+                </button>
+              </div>
+            </form>
           </Dialog.Panel>
         </div>
       </Dialog>

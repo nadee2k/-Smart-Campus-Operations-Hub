@@ -53,7 +53,7 @@ export default function DashboardLayout() {
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-stone-50 dark:bg-zinc-950">
       {/* Top Navigation */}
       <nav className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/60 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -61,7 +61,7 @@ export default function DashboardLayout() {
             {/* Left: Logo */}
             <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
               <UniOpsLogo className="h-7 w-7" />
-              <span className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">UniOps</span>
+              <span className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">UniOps</span>
             </Link>
 
             {/* Center: Nav links (desktop) */}
@@ -75,7 +75,7 @@ export default function DashboardLayout() {
                     to={item.to}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                       active
-                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'
+                        ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white'
                         : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800'
                     }`}
                   >
@@ -90,7 +90,7 @@ export default function DashboardLayout() {
                 <HeadlessMenu as="div" className="relative">
                   <HeadlessMenu.Button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                     adminNavItems.some(i => isActive(i.to))
-                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'
+                      ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white'
                       : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800'
                   }`}>
                     <Settings className="h-3.5 w-3.5" />
@@ -116,7 +116,7 @@ export default function DashboardLayout() {
                                 to={item.to}
                                 className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
                                   active || isActive(item.to)
-                                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'
+                                    ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white'
                                     : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
                                 }`}
                               >
@@ -154,7 +154,7 @@ export default function DashboardLayout() {
                   {user?.pictureUrl ? (
                     <img src={user.pictureUrl} alt="" className="h-6 w-6 rounded-full" />
                   ) : (
-                    <div className="h-6 w-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-xs font-semibold">
+                    <div className="h-6 w-6 rounded-full bg-gray-900 dark:bg-white text-white dark:text-black flex items-center justify-center text-white text-xs font-semibold">
                       {user?.name?.charAt(0)}
                     </div>
                   )}
@@ -167,7 +167,7 @@ export default function DashboardLayout() {
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.name}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-indigo-50 text-zinc-700 dark:bg-indigo-500/10 dark:text-indigo-400">
                         {user?.role}
                       </span>
                     </div>
@@ -220,7 +220,7 @@ export default function DashboardLayout() {
                 {user?.pictureUrl ? (
                   <img src={user.pictureUrl} alt="" className="h-9 w-9 rounded-full" />
                 ) : (
-                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-sm font-semibold">
+                  <div className="h-9 w-9 rounded-full bg-gray-900 dark:bg-white text-white dark:text-black flex items-center justify-center text-white text-sm font-semibold">
                     {user?.name?.charAt(0)}
                   </div>
                 )}
@@ -240,7 +240,7 @@ export default function DashboardLayout() {
                       to={item.to}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                         active
-                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'
+                          ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white'
                           : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
                       }`}
                     >
@@ -264,7 +264,7 @@ export default function DashboardLayout() {
                           to={item.to}
                           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                             active
-                              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'
+                              ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white'
                               : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
                           }`}
                         >

@@ -67,7 +67,7 @@ export default function NotificationBell() {
             {count > 0 && (
               <button
                 onClick={async () => { await notificationService.markAllAsRead(); setCount(0); fetchRecent(); }}
-                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                className="text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:underline"
               >
                 Mark all read
               </button>
@@ -96,7 +96,7 @@ export default function NotificationBell() {
           </div>
           <button
             onClick={() => { setOpen(false); navigate('/notifications'); }}
-            className="w-full text-center text-xs font-medium text-indigo-600 dark:text-indigo-400 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 border-t border-gray-100 dark:border-gray-800 transition-colors"
+            className="w-full text-center text-xs font-medium text-zinc-700 dark:text-zinc-300 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 border-t border-gray-100 dark:border-gray-800 transition-colors"
           >
             View all notifications
           </button>

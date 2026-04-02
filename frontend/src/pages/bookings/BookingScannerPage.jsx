@@ -61,7 +61,7 @@ export default function BookingScannerPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-8">
-        <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25">
+        <div className="p-2.5 rounded-xl bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 shadow-sm">
           <QrCode className="h-6 w-6" />
         </div>
         <div>
@@ -89,7 +89,7 @@ export default function BookingScannerPage() {
 
         {status === 'LOADING' && (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-12 w-12 animate-spin text-indigo-500 mb-4" />
+            <Loader2 className="h-12 w-12 animate-spin text-zinc-600 mb-4" />
             <p className="text-lg font-medium text-gray-700 dark:text-gray-300">Contacting server...</p>
             <p className="text-sm text-gray-500">Verifying the generated physical pass.</p>
           </div>

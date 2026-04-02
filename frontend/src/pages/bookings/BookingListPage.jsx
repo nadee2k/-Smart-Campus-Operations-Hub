@@ -110,7 +110,7 @@ export default function BookingListPage() {
         {!isAdmin && (
           <Link
             to="/bookings/create"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-full text-sm font-medium hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/25"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-full text-sm font-medium transition-all shadow-sm"
           >
             <Plus className="h-4 w-4" />
             New Booking
@@ -148,7 +148,7 @@ export default function BookingListPage() {
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       <span>{formatDateTimeRange(booking.startTime, booking.endTime)}</span>
                       {booking.startTime && booking.endTime && (
-                        <span className="ml-2 text-xs font-medium text-indigo-500 dark:text-indigo-400">
+                        <span className="ml-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
                           ({formatDuration(booking.startTime, booking.endTime)})
                         </span>
                       )}

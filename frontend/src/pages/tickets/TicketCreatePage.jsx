@@ -263,7 +263,7 @@ export default function TicketCreatePage() {
                 <button
                   type="button"
                   onClick={() => setShowPriorityTip((v) => !v)}
-                  className="text-gray-400 hover:text-indigo-500 transition-colors"
+                  className="text-gray-400 hover:text-zinc-600 transition-colors"
                 >
                   <Info className="h-4 w-4" />
                 </button>
@@ -336,7 +336,7 @@ export default function TicketCreatePage() {
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25"
+              className="px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
             >
               {submitting ? 'Creating…' : 'Create'}
             </button>
