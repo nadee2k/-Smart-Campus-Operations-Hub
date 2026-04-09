@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (React + Vite)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "./frontend",
+      "port": 5173
+    },
+    {
+      "name": "Backend (Spring Boot)",
+      "runtimeExecutable": "mvn",
+      "runtimeArgs": ["spring-boot:run"],
+      "cwd": "./backend",
+      "port": 8080
+    }
+  ]
+}
