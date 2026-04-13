@@ -143,7 +143,7 @@ export default function BookingCalendarPage() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <CalendarDays className="h-6 w-6 text-zinc-600" />
+          <CalendarDays className="h-6 w-6 text-indigo-500" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Booking Calendar</h1>
         </div>
       </div>
@@ -172,7 +172,7 @@ export default function BookingCalendarPage() {
                       onClick={() => { setSelectedResourceId(String(r.id)); setDropdownOpen(false); }}
                       className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-900/30 ${
                         String(r.id) === String(selectedResourceId)
-                          ? 'text-zinc-700 dark:text-zinc-300 font-semibold bg-indigo-50/50 dark:bg-indigo-900/20'
+                          ? 'text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50/50 dark:bg-indigo-900/20'
                           : 'text-gray-700 dark:text-gray-300'
                       }`}
                     >
@@ -250,7 +250,7 @@ export default function BookingCalendarPage() {
                       <div
                         className={`text-lg font-bold mt-0.5 ${
                           today
-                            ? 'text-zinc-700 dark:text-zinc-300'
+                            ? 'text-indigo-600 dark:text-indigo-400'
                             : 'text-gray-900 dark:text-white'
                         }`}
                       >

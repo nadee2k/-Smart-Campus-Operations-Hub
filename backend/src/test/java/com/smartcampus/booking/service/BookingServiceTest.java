@@ -40,6 +40,7 @@ class BookingServiceTest {
     @Mock private CampusResourceRepository resourceRepository;
     @Mock private UserService userService;
     @Mock private NotificationService notificationService;
+    @Mock private com.smartcampus.activity.service.ActivityLogService activityLogService;
 
     @InjectMocks
     private BookingServiceImpl service;
@@ -159,7 +160,7 @@ class BookingServiceTest {
     void cancel_shouldOnlyAllowOwner() {
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
 
-        assertThatThrownBy(() -> service.cancel(1L, 999L, "User requested cancellation"))
+        assertThatThrownBy(() -> service.cancel(1L, 999L, ""))
                 .isInstanceOf(com.smartcampus.common.exception.AccessDeniedException.class);
     }
 
