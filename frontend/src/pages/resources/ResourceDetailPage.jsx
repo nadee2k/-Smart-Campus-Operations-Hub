@@ -12,6 +12,9 @@ import {
   Users,
   Clock,
   Calendar,
+  ShieldCheck,
+  Image,
+  Link2,
   Pencil,
   Trash2,
   ArrowLeft,
@@ -42,6 +45,12 @@ function formatDateTime(dateStr) {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
   return d.toLocaleString();
+}
+
+function getMaintenanceTone(score = 100) {
+  if (score >= 80) return 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-500/10';
+  if (score >= 50) return 'text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-500/10';
+  return 'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-500/10';
 }
 
 export default function ResourceDetailPage() {
@@ -100,6 +109,9 @@ export default function ResourceDetailPage() {
     availabilityStart && availabilityEnd
       ? `${formatTime(typeof availabilityStart === 'string' ? availabilityStart : availabilityStart)} – ${formatTime(typeof availabilityEnd === 'string' ? availabilityEnd : availabilityEnd)}`
       : '—';
+  const amenities = resource.amenities || [];
+  const photoUrls = resource.photoUrls || [];
+  const maintenanceScore = resource.maintenanceScore ?? 100;
 
   return (
     <div>
@@ -112,6 +124,13 @@ export default function ResourceDetailPage() {
           Back to Resources
         </Link>
         <div className="flex flex-wrap gap-2">
+          <Link
+            to={`/bookings/calendar?resourceId=${resource.id}`}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <Calendar className="h-4 w-4" />
+            View availability
+          </Link>
           {!isTechnician && (
             <Link
               to={`/bookings/create?resourceId=${resource.id}`}
@@ -195,6 +214,30 @@ export default function ResourceDetailPage() {
 
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 shrink-0">
+              <ShieldCheck className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Health Indicator</p>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getMaintenanceTone(maintenanceScore)}`}>
+                {maintenanceScore}/100
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 shrink-0">
+              <Building2 className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Owner / Department</p>
+              <p className="font-medium text-gray-900 dark:text-white">
+                {resource.ownerName || '—'} {resource.department ? `• ${resource.department}` : ''}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 shrink-0">
               <Clock className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </div>
             <div>
@@ -215,6 +258,68 @@ export default function ResourceDetailPage() {
                 {formatDateTime(resource.updatedAt)}
               </p>
             </div>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Amenities / Tags</p>
+          {amenities.length ? (
+            <div className="flex flex-wrap gap-2">
+              {amenities.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">No amenities set</p>
+          )}
+        </div>
+
+        <div className="mt-6 space-y-3">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Media Gallery</p>
+          {photoUrls.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {photoUrls.map((url, index) => (
+                <a key={`${url}-${index}`} href={url} target="_blank" rel="noreferrer" className="group block">
+                  <img
+                    src={url}
+                    alt={`Resource media ${index + 1}`}
+                    className="h-28 w-full object-cover rounded-xl border border-gray-200 dark:border-gray-800 group-hover:opacity-90 transition"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
+          {photoUrls.length === 0 && (
+            <p className="text-sm text-gray-500 dark:text-gray-400">No photos available</p>
+          )}
+          <div className="flex flex-wrap gap-3">
+            {resource.layoutMapUrl && (
+              <a
+                href={resource.layoutMapUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <Image className="h-4 w-4" />
+                Open Layout Map
+              </a>
+            )}
+            {resource.view360Url && (
+              <a
+                href={resource.view360Url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <Link2 className="h-4 w-4" />
+                Open 360 View
+              </a>
+            )}
           </div>
         </div>
       </div>

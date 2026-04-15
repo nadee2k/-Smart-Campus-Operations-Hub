@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { resourceService } from '../../services/resourceService';
 import { bookingService } from '../../services/bookingService';
+import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, Clock } from 'lucide-react';
 
@@ -65,6 +66,7 @@ function toISOLocal(date) {
 export default function BookingCalendarPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { isAdmin, isTechnician } = useAuth();
 
   const [resources, setResources] = useState([]);
   const [selectedResourceId, setSelectedResourceId] = useState(searchParams.get('resourceId') || '');
@@ -120,12 +122,14 @@ export default function BookingCalendarPage() {
   }, [bookings]);
 
   const selectedResource = resources.find((r) => String(r.id) === String(selectedResourceId));
+  const canCreateBookings = !isAdmin && !isTechnician;
 
   const handlePrevWeek = () => setWeekStart((prev) => addDays(prev, -7));
   const handleNextWeek = () => setWeekStart((prev) => addDays(prev, 7));
   const handleToday = () => setWeekStart(getMonday(new Date()));
 
   const handleCellClick = (dayIdx, hour) => {
+    if (!canCreateBookings) return;
     const key = `${dayIdx}-${hour}`;
     if (bookingMap[key]) return;
     const cellDate = addDays(weekStart, dayIdx);
@@ -138,6 +142,21 @@ export default function BookingCalendarPage() {
     const today = new Date();
     return cellDate.toDateString() === today.toDateString();
   };
+
+  const selectedDateKey = searchParams.get('date');
+  const selectedDate = selectedDateKey ? new Date(selectedDateKey) : new Date();
+  const selectedDayStart = new Date(selectedDate);
+  selectedDayStart.setHours(0, 0, 0, 0);
+  const selectedDayEnd = new Date(selectedDate);
+  selectedDayEnd.setHours(23, 59, 59, 999);
+
+  const selectedDateBookings = bookings
+    .filter((b) => {
+      const start = new Date(b.startTime);
+      const end = new Date(b.endTime);
+      return start <= selectedDayEnd && end >= selectedDayStart;
+    })
+    .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
   return (
     <div>
@@ -212,6 +231,11 @@ export default function BookingCalendarPage() {
             </button>
           </div>
         </div>
+        {!canCreateBookings && (
+          <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            You are in view-only mode. Select a resource to inspect bookings by date and time.
+          </p>
+        )}
       </div>
 
       {/* Calendar grid */}
@@ -326,6 +350,55 @@ export default function BookingCalendarPage() {
             {label}
           </span>
         ))}
+      </div>
+
+      {/* Date/time booking list */}
+      <div className="mt-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Bookings by Date/Time</h2>
+          <input
+            type="date"
+            value={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`}
+            onChange={(e) => {
+              const next = new Date(e.target.value);
+              const params = new URLSearchParams(searchParams);
+              params.set('date', `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`);
+              navigate(`/bookings/calendar?${params.toString()}`);
+            }}
+            className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
+          />
+        </div>
+
+        {!selectedResourceId ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">Select a resource to view bookings.</p>
+        ) : selectedDateBookings.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">No bookings on this date for the selected resource.</p>
+        ) : (
+          <div className="space-y-2">
+            {selectedDateBookings.map((booking) => (
+              <div
+                key={booking.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {booking.purpose ?? 'Booking'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(booking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold ${
+                    STATUS_COLORS[booking.status] || STATUS_COLORS.CANCELLED
+                  }`}
+                >
+                  {booking.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
