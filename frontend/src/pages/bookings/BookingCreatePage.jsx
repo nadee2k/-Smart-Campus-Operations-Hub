@@ -452,6 +452,13 @@ export default function BookingCreatePage() {
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
+  const selectedResource = resources.find((r) => String(r.id) === String(form.resourceId));
+  const capacityExceeded =
+    selectedResource &&
+    form.expectedAttendees !== '' &&
+    form.expectedAttendees != null &&
+    Number(form.expectedAttendees) > selectedResource.capacity;
+
   const inputBase =
     'w-full px-4 py-2.5 rounded-xl border bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 transition-shadow';
   const inputError = 'border-red-500 dark:border-red-500';
@@ -647,6 +654,19 @@ export default function BookingCreatePage() {
               />
               {errors.expectedAttendees && (
                 <p className="mt-1 text-xs text-red-500">{errors.expectedAttendees}</p>
+              )}
+              {capacityExceeded && (
+                <div className="mt-2 flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div className="text-sm text-amber-700 dark:text-amber-300">
+                    <p className="font-medium">Capacity exceeded</p>
+                    <p className="text-xs mt-0.5 text-amber-600 dark:text-amber-400">
+                      <span className="font-semibold">{selectedResource.name}</span> has a maximum capacity of{' '}
+                      <span className="font-semibold">{selectedResource.capacity}</span> people, but you entered{' '}
+                      <span className="font-semibold">{form.expectedAttendees}</span>. You can still submit, but the booking may be rejected.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>

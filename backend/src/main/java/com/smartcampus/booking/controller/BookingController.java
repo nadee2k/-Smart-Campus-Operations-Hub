@@ -40,6 +40,14 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getById(id));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<BookingResponse> update(@PathVariable Long id,
+                                                  @Valid @RequestBody BookingRequest request) {
+        Long userId = AuthUtil.getCurrentUserId();
+        return ResponseEntity.ok(bookingService.update(id, request, userId));
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PageResponse<BookingResponse>> getAll(

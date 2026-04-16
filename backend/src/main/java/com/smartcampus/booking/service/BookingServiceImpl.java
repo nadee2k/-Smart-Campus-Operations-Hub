@@ -84,6 +84,46 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
+    public BookingResponse update(Long id, BookingRequest request, Long userId) {
+        Booking booking = findById(id);
+
+        if (!booking.getUser().getId().equals(userId)) {
+            throw new com.smartcampus.common.exception.AccessDeniedException("You can only edit your own bookings");
+        }
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new BadRequestException("Only pending bookings can be edited");
+        }
+        if (request.getEndTime().isBefore(request.getStartTime()) ||
+            request.getEndTime().isEqual(request.getStartTime())) {
+            throw new BadRequestException("End time must be after start time");
+        }
+
+        CampusResource resource = resourceRepository.findById(request.getResourceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Resource", request.getResourceId()));
+        if (resource.getDeleted()) {
+            throw new ResourceNotFoundException("Resource", request.getResourceId());
+        }
+
+        List<Booking> conflicts = bookingRepository.findConflicting(
+                resource.getId(), request.getStartTime(), request.getEndTime());
+        conflicts.removeIf(c -> c.getId().equals(id));
+        if (!conflicts.isEmpty()) {
+            throw new ConflictException("Time slot conflicts with an existing booking");
+        }
+
+        booking.setResource(resource);
+        booking.setStartTime(request.getStartTime());
+        booking.setEndTime(request.getEndTime());
+        booking.setPurpose(request.getPurpose());
+        booking.setExpectedAttendees(request.getExpectedAttendees());
+
+        Booking saved = bookingRepository.save(booking);
+        activityLogService.log(userId, booking.getUser().getName(), "BOOKING_UPDATED", "BOOKING", saved.getId(), "Updated booking for " + resource.getName());
+        return toResponse(saved);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public BookingResponse getById(Long id) {
         Booking booking = findById(id);

@@ -14,6 +14,8 @@ public interface BookingService {
 
     BookingResponse create(BookingRequest request, Long userId);
 
+    BookingResponse update(Long id, BookingRequest request, Long userId);
+
     BookingResponse getById(Long id);
 
     Page<BookingResponse> getAll(Pageable pageable);
