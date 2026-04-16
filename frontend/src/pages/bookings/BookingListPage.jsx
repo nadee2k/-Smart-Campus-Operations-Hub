@@ -49,7 +49,7 @@ export default function BookingListPage() {
   const fetchBookings = () => {
     setLoading(true);
     bookingService
-      .getMyBookings({ page, size: 10 })
+      .getMyBookings({ page, size: 10, sort: 'createdAt,desc' })
       .then((res) => {
         const data = res.data;
         setBookings(data.content ?? data ?? []);

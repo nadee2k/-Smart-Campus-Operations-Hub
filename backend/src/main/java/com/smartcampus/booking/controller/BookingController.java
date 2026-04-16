@@ -9,6 +9,7 @@ import com.smartcampus.common.dto.PageResponse;
 import com.smartcampus.config.security.AuthUtil;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -55,14 +56,14 @@ public class BookingController {
             @RequestParam(required = false) Long resourceId,
             @RequestParam(required = false) LocalDateTime startDate,
             @RequestParam(required = false) LocalDateTime endDate,
-            @PageableDefault(size = 10, sort = "created_at") Pageable pageable) {
+            @PageableDefault(size = 10, sort = "created_at", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(PageResponse.of(
                 bookingService.getFiltered(status, resourceId, startDate, endDate, pageable)));
     }
 
     @GetMapping("/my")
     public ResponseEntity<PageResponse<BookingResponse>> getMyBookings(
-            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Long userId = AuthUtil.getCurrentUserId();
         return ResponseEntity.ok(PageResponse.of(bookingService.getByUser(userId, pageable)));
     }
