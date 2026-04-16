@@ -45,6 +45,13 @@ export default function ResourceFormPage() {
     type: '',
     capacity: 0,
     location: '',
+    amenities: '',
+    ownerName: '',
+    department: '',
+    maintenanceScore: 100,
+    photoUrls: '',
+    layoutMapUrl: '',
+    view360Url: '',
     availabilityStartTime: '08:00',
     availabilityEndTime: '18:00',
     status: 'ACTIVE',
@@ -66,6 +73,13 @@ export default function ResourceFormPage() {
             type: r.type || '',
             capacity: r.capacity ?? 0,
             location: r.location || '',
+            amenities: (r.amenities || []).join(', '),
+            ownerName: r.ownerName || '',
+            department: r.department || '',
+            maintenanceScore: r.maintenanceScore ?? 100,
+            photoUrls: (r.photoUrls || []).join('\n'),
+            layoutMapUrl: r.layoutMapUrl || '',
+            view360Url: r.view360Url || '',
             availabilityStartTime: toTimeInput(r.availabilityStartTime) || '08:00',
             availabilityEndTime: toTimeInput(r.availabilityEndTime) || '18:00',
             status: r.status || 'ACTIVE',
@@ -83,6 +97,14 @@ export default function ResourceFormPage() {
     if (form.capacity < 0 || form.capacity === '' || form.capacity == null) {
       next.capacity = 'Capacity must be 0 or greater';
     }
+    if (
+      form.maintenanceScore === '' ||
+      form.maintenanceScore == null ||
+      Number(form.maintenanceScore) < 0 ||
+      Number(form.maintenanceScore) > 100
+    ) {
+      next.maintenanceScore = 'Maintenance score must be between 0 and 100';
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -96,6 +118,17 @@ export default function ResourceFormPage() {
       type: form.type,
       capacity: Number(form.capacity),
       location: form.location?.trim() || null,
+      amenities: form.amenities
+        ? form.amenities.split(',').map((s) => s.trim()).filter(Boolean)
+        : [],
+      ownerName: form.ownerName?.trim() || null,
+      department: form.department?.trim() || null,
+      maintenanceScore: Number(form.maintenanceScore),
+      photoUrls: form.photoUrls
+        ? form.photoUrls.split('\n').map((s) => s.trim()).filter(Boolean)
+        : [],
+      layoutMapUrl: form.layoutMapUrl?.trim() || null,
+      view360Url: form.view360Url?.trim() || null,
       availabilityStartTime: form.availabilityStartTime || null,
       availabilityEndTime: form.availabilityEndTime || null,
       status: form.status,
@@ -218,6 +251,109 @@ export default function ResourceFormPage() {
               className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Building, room, etc."
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Amenities / Tags
+            </label>
+            <input
+              type="text"
+              value={form.amenities}
+              onChange={(e) => update('amenities', e.target.value)}
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              placeholder="projector, AC, smart board, wheelchair access"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Use commas to separate tags.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Owner
+              </label>
+              <input
+                type="text"
+                value={form.ownerName}
+                onChange={(e) => update('ownerName', e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                placeholder="e.g. Facilities Office"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Department
+              </label>
+              <input
+                type="text"
+                value={form.department}
+                onChange={(e) => update('department', e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                placeholder="e.g. Computing School"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Maintenance Score (0-100)
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={form.maintenanceScore}
+              onChange={(e) => update('maintenanceScore', e.target.value)}
+              className={`w-full px-4 py-2 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${
+                errors.maintenanceScore
+                  ? 'border-red-500 dark:border-red-500'
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
+              placeholder="100"
+            />
+            {errors.maintenanceScore && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.maintenanceScore}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Photo URLs (one per line)
+            </label>
+            <textarea
+              rows={3}
+              value={form.photoUrls}
+              onChange={(e) => update('photoUrls', e.target.value)}
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              placeholder="https://example.com/photo-1.jpg"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Layout Map URL
+              </label>
+              <input
+                type="url"
+                value={form.layoutMapUrl}
+                onChange={(e) => update('layoutMapUrl', e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                placeholder="https://example.com/layout-map.png"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                360 View URL
+              </label>
+              <input
+                type="url"
+                value={form.view360Url}
+                onChange={(e) => update('view360Url', e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                placeholder="https://example.com/virtual-tour"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

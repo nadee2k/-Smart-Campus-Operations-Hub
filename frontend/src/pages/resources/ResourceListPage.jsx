@@ -6,7 +6,8 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
-import { Search, Plus, MapPin, Users, Building2, Monitor, Presentation, FlaskConical, Server } from 'lucide-react';
+import { getResourceHealthScore } from '../../utils/resourceHealth';
+import { Search, Plus, MapPin, Users, Building2, Presentation, FlaskConical, Server, CalendarDays, ShieldCheck } from 'lucide-react';
 
 const TYPE_PILLS = [
   { value: '', label: 'All' },
@@ -46,6 +47,12 @@ const getTypeIcon = (type) => {
     case 'EQUIPMENT': return <Server className="h-6 w-6" />;
     default: return <Building2 className="h-6 w-6" />;
   }
+};
+
+const getHealthTone = (score = 100) => {
+  if (score >= 80) return 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-500/10';
+  if (score >= 50) return 'text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-500/10';
+  return 'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-500/10';
 };
 
 export default function ResourceListPage() {
@@ -95,6 +102,13 @@ export default function ResourceListPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Resources</h1>
         <div className="flex items-center gap-3">
+          <Link
+            to="/bookings/calendar"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <CalendarDays className="h-4 w-4" />
+            Availability Calendar
+          </Link>
           <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -160,6 +174,7 @@ export default function ResourceListPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {resources.map((resource) => {
                const bannerBg = TYPE_BG_MAP[resource.type] || TYPE_BG_MAP.OTHER;
+               const healthScore = getResourceHealthScore(resource);
                return (
                  <Link
                    key={resource.id}
@@ -193,10 +208,21 @@ export default function ResourceListPage() {
                          <Users className="h-4 w-4 text-zinc-400 shrink-0" />
                          <span>{resource.capacity ?? 0} seats</span>
                        </div>
+                       <div className="flex items-center gap-2.5 text-sm text-gray-600 dark:text-gray-400">
+                         <ShieldCheck className="h-4 w-4 text-zinc-400 shrink-0" />
+                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${getHealthTone(healthScore)}`}>
+                           Health {healthScore}/100
+                         </span>
+                       </div>
                        {resource.location && (
                          <div className="flex items-center gap-2.5 text-sm text-gray-600 dark:text-gray-400">
                            <MapPin className="h-4 w-4 text-zinc-400 shrink-0" />
                            <span className="truncate">{resource.location}</span>
+                         </div>
+                       )}
+                       {resource.department && (
+                         <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                           {resource.department}
                          </div>
                        )}
                      </div>

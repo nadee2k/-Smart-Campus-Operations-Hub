@@ -15,12 +15,16 @@ public interface CampusResourceRepository extends JpaRepository<CampusResource, 
            "AND (CAST(:type AS VARCHAR) IS NULL OR r.type = CAST(:type AS VARCHAR)) " +
            "AND (CAST(:status AS VARCHAR) IS NULL OR r.status = CAST(:status AS VARCHAR)) " +
            "AND (CAST(:query AS VARCHAR) IS NULL OR LOWER(r.name) LIKE LOWER(CONCAT('%', CAST(:query AS VARCHAR), '%')) " +
-           "     OR LOWER(r.location) LIKE LOWER(CONCAT('%', CAST(:query AS VARCHAR), '%')))",
+           "     OR LOWER(r.location) LIKE LOWER(CONCAT('%', CAST(:query AS VARCHAR), '%')) " +
+           "     OR LOWER(COALESCE(r.department, '')) LIKE LOWER(CONCAT('%', CAST(:query AS VARCHAR), '%')) " +
+           "     OR LOWER(COALESCE(r.owner_name, '')) LIKE LOWER(CONCAT('%', CAST(:query AS VARCHAR), '%')))",
            countQuery = "SELECT COUNT(*) FROM resources r WHERE r.deleted = false " +
            "AND (CAST(:type AS VARCHAR) IS NULL OR r.type = CAST(:type AS VARCHAR)) " +
            "AND (CAST(:status AS VARCHAR) IS NULL OR r.status = CAST(:status AS VARCHAR)) " +
            "AND (CAST(:query AS VARCHAR) IS NULL OR LOWER(r.name) LIKE LOWER(CONCAT('%', CAST(:query AS VARCHAR), '%')) " +
-           "     OR LOWER(r.location) LIKE LOWER(CONCAT('%', CAST(:query AS VARCHAR), '%')))",
+           "     OR LOWER(r.location) LIKE LOWER(CONCAT('%', CAST(:query AS VARCHAR), '%')) " +
+           "     OR LOWER(COALESCE(r.department, '')) LIKE LOWER(CONCAT('%', CAST(:query AS VARCHAR), '%')) " +
+           "     OR LOWER(COALESCE(r.owner_name, '')) LIKE LOWER(CONCAT('%', CAST(:query AS VARCHAR), '%')))",
            nativeQuery = true)
     Page<CampusResource> search(
             @Param("type") String type,

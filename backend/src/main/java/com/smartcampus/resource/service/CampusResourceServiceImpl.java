@@ -16,6 +16,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class CampusResourceServiceImpl implements CampusResourceService {
 
@@ -36,6 +39,9 @@ public class CampusResourceServiceImpl implements CampusResourceService {
         CampusResource resource = modelMapper.map(request, CampusResource.class);
         if (resource.getStatus() == null) {
             resource.setStatus(ResourceStatus.ACTIVE);
+        }
+        if (resource.getMaintenanceScore() == null) {
+            resource.setMaintenanceScore(100);
         }
         CampusResource saved = repository.save(resource);
         activityLogService.log(null, "Admin", "RESOURCE_CREATED", "RESOURCE", saved.getId(), "Created resource: " + saved.getName());
@@ -70,6 +76,9 @@ public class CampusResourceServiceImpl implements CampusResourceService {
     public ResourceResponse update(Long id, ResourceRequest request) {
         CampusResource resource = findActiveById(id);
         modelMapper.map(request, resource);
+        if (resource.getMaintenanceScore() == null) {
+            resource.setMaintenanceScore(100);
+        }
         CampusResource saved = repository.save(resource);
         activityLogService.log(null, "Admin", "RESOURCE_UPDATED", "RESOURCE", saved.getId(), "Updated resource: " + saved.getName());
         return toResponse(saved);
@@ -97,8 +106,20 @@ public class CampusResourceServiceImpl implements CampusResourceService {
     private ResourceResponse toResponse(CampusResource r) {
         return new ResourceResponse(
                 r.getId(), r.getName(), r.getType(), r.getCapacity(),
-                r.getLocation(), r.getAvailabilityStartTime(), r.getAvailabilityEndTime(),
+                r.getLocation(),
+                copyList(r.getAmenities()),
+                copyList(r.getPhotoUrls()),
+                r.getLayoutMapUrl(),
+                r.getView360Url(),
+                r.getOwnerName(),
+                r.getDepartment(),
+                r.getMaintenanceScore(),
+                r.getAvailabilityStartTime(), r.getAvailabilityEndTime(),
                 r.getStatus(), r.getCreatedAt(), r.getUpdatedAt()
         );
+    }
+
+    private List<String> copyList(List<String> values) {
+        return values == null ? List.of() : new ArrayList<>(values);
     }
 }
