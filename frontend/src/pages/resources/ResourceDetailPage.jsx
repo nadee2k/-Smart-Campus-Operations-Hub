@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import { getResourceHealthScore } from '../../utils/resourceHealth';
 import {
   Building2,
   MapPin,
@@ -111,7 +112,7 @@ export default function ResourceDetailPage() {
       : '—';
   const amenities = resource.amenities || [];
   const photoUrls = resource.photoUrls || [];
-  const maintenanceScore = resource.maintenanceScore ?? 100;
+  const maintenanceScore = getResourceHealthScore(resource);
 
   return (
     <div>

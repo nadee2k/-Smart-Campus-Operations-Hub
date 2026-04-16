@@ -6,6 +6,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
+import { getResourceHealthScore } from '../../utils/resourceHealth';
 import { Search, Plus, MapPin, Users, Building2, Presentation, FlaskConical, Server, CalendarDays, ShieldCheck } from 'lucide-react';
 
 const TYPE_PILLS = [
@@ -173,7 +174,7 @@ export default function ResourceListPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {resources.map((resource) => {
                const bannerBg = TYPE_BG_MAP[resource.type] || TYPE_BG_MAP.OTHER;
-               const healthScore = resource.maintenanceScore ?? 100;
+               const healthScore = getResourceHealthScore(resource);
                return (
                  <Link
                    key={resource.id}
