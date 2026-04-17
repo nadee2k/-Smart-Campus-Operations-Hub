@@ -7,7 +7,7 @@ import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
-import { Plus, XCircle, LogIn, Download, Eye, Pencil } from 'lucide-react';
+import { Plus, XCircle, LogIn, Download, Eye } from 'lucide-react';
 import { exportCsv } from '../../utils/exportCsv';
 import BookingQRCode from '../../components/bookings/BookingQRCode';
 import { useAuth } from '../../context/AuthContext';
@@ -175,16 +175,6 @@ export default function BookingListPage() {
                         <Eye className="h-3.5 w-3.5" />
                         View
                       </Link>
-                      {booking.status === 'PENDING' && (
-                        <Link
-                          to={`/bookings/${booking.id}`}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                          title="Edit booking"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </Link>
-                      )}
                       <BookingQRCode booking={booking} />
                       {canCheckIn(booking) && (
                         <button
