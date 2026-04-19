@@ -1,6 +1,7 @@
 package com.smartcampus.booking.service;
 
 import com.smartcampus.activity.service.ActivityLogService;
+import com.smartcampus.auth.entity.Role;
 import com.smartcampus.auth.entity.User;
 import com.smartcampus.auth.service.UserService;
 import com.smartcampus.booking.dto.BookingRequest;
@@ -8,6 +9,7 @@ import com.smartcampus.booking.dto.BookingResponse;
 import com.smartcampus.booking.entity.Booking;
 import com.smartcampus.booking.entity.BookingStatus;
 import com.smartcampus.booking.repository.BookingRepository;
+import com.smartcampus.common.exception.AccessDeniedException;
 import com.smartcampus.common.exception.BadRequestException;
 import com.smartcampus.common.exception.ConflictException;
 import com.smartcampus.common.exception.ResourceNotFoundException;
@@ -85,8 +87,13 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public BookingResponse getById(Long id) {
+    public BookingResponse getById(Long id, Long viewerUserId, Role viewerRole) {
         Booking booking = findById(id);
+        boolean owner = booking.getUser().getId().equals(viewerUserId);
+        boolean admin = viewerRole == Role.ADMIN;
+        if (!owner && !admin) {
+            throw new AccessDeniedException("You can only view your own bookings");
+        }
         return toResponse(booking);
     }
 
@@ -117,6 +124,12 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse approve(Long id, String adminComment) {
         Booking booking = findById(id);
         validateTransition(booking, BookingStatus.APPROVED);
+        List<Booking> conflicts = bookingRepository.findConflicting(
+                booking.getResource().getId(), booking.getStartTime(), booking.getEndTime());
+        boolean overlapsOther = conflicts.stream().anyMatch(c -> !c.getId().equals(booking.getId()));
+        if (overlapsOther) {
+            throw new ConflictException("Cannot approve: time slot overlaps another active booking");
+        }
         booking.setStatus(BookingStatus.APPROVED);
         booking.setAdminComment(adminComment);
         Booking saved = bookingRepository.save(booking);
@@ -134,6 +147,9 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse reject(Long id, String adminComment) {
+        if (adminComment == null || adminComment.isBlank()) {
+            throw new BadRequestException("A reason is required when rejecting a booking");
+        }
         Booking booking = findById(id);
         validateTransition(booking, BookingStatus.REJECTED);
         booking.setStatus(BookingStatus.REJECTED);
@@ -155,7 +171,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse cancel(Long id, Long userId, String reason) {
         Booking booking = findById(id);
         if (!booking.getUser().getId().equals(userId)) {
-            throw new com.smartcampus.common.exception.AccessDeniedException("You can only cancel your own bookings");
+            throw new AccessDeniedException("You can only cancel your own bookings");
         }
         validateTransition(booking, BookingStatus.CANCELLED);
         booking.setStatus(BookingStatus.CANCELLED);
@@ -172,7 +188,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse checkIn(Long id, Long userId) {
         Booking booking = findById(id);
         if (!booking.getUser().getId().equals(userId)) {
-            throw new com.smartcampus.common.exception.AccessDeniedException("You can only check in to your own bookings");
+            throw new AccessDeniedException("You can only check in to your own bookings");
         }
         if (booking.getStatus() != BookingStatus.APPROVED) {
             throw new com.smartcampus.common.exception.BadRequestException("Can only check in to approved bookings");

@@ -79,6 +79,10 @@ export default function BookingAdminPage() {
   const handleAction = () => {
     const { type, booking, adminComment } = actionModal;
     if (!booking) return;
+    if (type === 'reject' && (!adminComment || !adminComment.trim())) {
+      toast.error('Please enter a reason for rejection');
+      return;
+    }
     const data = { adminComment: adminComment?.trim() || undefined };
     const request = type === 'approve' ? bookingService.approve(booking.id, data) : bookingService.reject(booking.id, data);
     request

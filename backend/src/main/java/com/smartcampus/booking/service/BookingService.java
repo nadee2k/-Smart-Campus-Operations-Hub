@@ -1,5 +1,6 @@
 package com.smartcampus.booking.service;
 
+import com.smartcampus.auth.entity.Role;
 import com.smartcampus.booking.dto.BookingRequest;
 import com.smartcampus.booking.dto.BookingResponse;
 import com.smartcampus.booking.entity.BookingStatus;
@@ -14,7 +15,7 @@ public interface BookingService {
 
     BookingResponse create(BookingRequest request, Long userId);
 
-    BookingResponse getById(Long id);
+    BookingResponse getById(Long id, Long viewerUserId, Role viewerRole);
 
     Page<BookingResponse> getAll(Pageable pageable);
 

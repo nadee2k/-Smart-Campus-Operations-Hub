@@ -1,5 +1,6 @@
 package com.smartcampus.booking.controller;
 
+import com.smartcampus.auth.entity.User;
 import com.smartcampus.booking.dto.BookingActionRequest;
 import com.smartcampus.booking.dto.BookingRequest;
 import com.smartcampus.booking.dto.BookingResponse;
@@ -37,7 +38,8 @@ public class BookingController {
 
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(bookingService.getById(id));
+        User viewer = AuthUtil.getCurrentUser();
+        return ResponseEntity.ok(bookingService.getById(id, viewer.getId(), viewer.getRole()));
     }
 
     @GetMapping

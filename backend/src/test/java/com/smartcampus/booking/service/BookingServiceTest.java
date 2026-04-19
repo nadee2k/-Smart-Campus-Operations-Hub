@@ -127,12 +127,52 @@ class BookingServiceTest {
     @Test
     void approve_shouldChangeStatusToApproved() {
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findConflicting(anyLong(), any(), any())).thenReturn(Collections.emptyList());
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
 
-        BookingResponse result = service.approve(1L, "Approved");
+        service.approve(1L, "Approved");
 
         verify(notificationService).sendNotification(
                 anyLong(), eq("BOOKING_APPROVED"), any(), eq("BOOKING"), eq(1L));
+    }
+
+    @Test
+    void approve_shouldThrowWhenOverlapsAnotherActiveBooking() {
+        Booking other = new Booking();
+        other.setId(2L);
+        other.setStatus(BookingStatus.APPROVED);
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+        when(bookingRepository.findConflicting(anyLong(), any(), any())).thenReturn(List.of(other));
+
+        assertThatThrownBy(() -> service.approve(1L, "OK"))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("overlaps");
+    }
+
+    @Test
+    void getById_shouldAllowOwner() {
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+
+        BookingResponse result = service.getById(1L, 1L, Role.USER);
+
+        assertThat(result.id()).isEqualTo(1L);
+    }
+
+    @Test
+    void getById_shouldAllowAdmin() {
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+
+        BookingResponse result = service.getById(1L, 99L, Role.ADMIN);
+
+        assertThat(result.id()).isEqualTo(1L);
+    }
+
+    @Test
+    void getById_shouldDenyOtherUser() {
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> service.getById(1L, 99L, Role.USER))
+                .isInstanceOf(com.smartcampus.common.exception.AccessDeniedException.class);
     }
 
     @Test
@@ -154,6 +194,16 @@ class BookingServiceTest {
 
         verify(notificationService).sendNotification(
                 anyLong(), eq("BOOKING_REJECTED"), any(), eq("BOOKING"), eq(1L));
+    }
+
+    @Test
+    void reject_shouldThrowWhenReasonMissing() {
+        assertThatThrownBy(() -> service.reject(1L, null))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("reason");
+
+        assertThatThrownBy(() -> service.reject(1L, "   "))
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test
