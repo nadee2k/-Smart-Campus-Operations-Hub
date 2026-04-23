@@ -270,6 +270,41 @@ public class CampusResourceServiceImpl implements CampusResourceService {
     @Override
     @Transactional
     @CacheEvict(value = "resources", allEntries = true)
+    public ResourceResponse cloneResource(Long id) {
+        CampusResource source = findActiveById(id);
+        CampusResource clone = new CampusResource();
+        clone.setName(source.getName() + " (Copy)");
+        clone.setType(source.getType());
+        clone.setCapacity(source.getCapacity());
+        clone.setLocation(source.getLocation());
+        clone.setDescription(source.getDescription());
+        clone.setAmenities(copyList(source.getAmenities()));
+        clone.setPhotoUrls(copyList(source.getPhotoUrls()));
+        clone.setLayoutMapUrl(source.getLayoutMapUrl());
+        clone.setView360Url(source.getView360Url());
+        clone.setOwnerName(source.getOwnerName());
+        clone.setDepartment(source.getDepartment());
+        clone.setMaintenanceScore(source.getMaintenanceScore() != null ? source.getMaintenanceScore() : 100);
+        clone.setAvailabilityStartTime(source.getAvailabilityStartTime());
+        clone.setAvailabilityEndTime(source.getAvailabilityEndTime());
+        clone.setStatus(source.getStatus() != null ? source.getStatus() : ResourceStatus.ACTIVE);
+        clone.setDeleted(false);
+
+        CampusResource saved = repository.save(clone);
+        activityLogService.log(
+                null,
+                "Admin",
+                "RESOURCE_CLONED",
+                "RESOURCE",
+                saved.getId(),
+                "Cloned resource from " + source.getName() + " to " + saved.getName()
+        );
+        return toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "resources", allEntries = true)
     public ResourceResponse toggleStatus(Long id) {
         CampusResource resource = findActiveById(id);
         ResourceStatus nextStatus = resource.getStatus() == ResourceStatus.OUT_OF_SERVICE

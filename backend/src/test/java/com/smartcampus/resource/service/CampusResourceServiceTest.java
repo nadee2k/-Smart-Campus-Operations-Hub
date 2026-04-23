@@ -148,6 +148,34 @@ class CampusResourceServiceTest {
     }
 
     @Test
+    void cloneResource_shouldDuplicateFieldsAndLogActivity() {
+        when(repository.findById(1L)).thenReturn(Optional.of(resource));
+        when(repository.save(any(CampusResource.class))).thenAnswer(invocation -> {
+            CampusResource saved = invocation.getArgument(0);
+            saved.setId(2L);
+            return saved;
+        });
+
+        ResourceResponse result = service.cloneResource(1L);
+
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(2L);
+        assertThat(result.name()).isEqualTo("Main Hall (Copy)");
+        assertThat(result.type()).isEqualTo(resource.getType());
+        assertThat(result.capacity()).isEqualTo(resource.getCapacity());
+        assertThat(result.location()).isEqualTo(resource.getLocation());
+        assertThat(result.description()).isEqualTo(resource.getDescription());
+        verify(activityLogService).log(
+                isNull(),
+                eq("Admin"),
+                eq("RESOURCE_CLONED"),
+                eq("RESOURCE"),
+                eq(2L),
+                contains("Cloned resource from Main Hall to Main Hall (Copy)")
+        );
+    }
+
+    @Test
     void delete_shouldSoftDeleteResource() {
         when(repository.findById(1L)).thenReturn(Optional.of(resource));
         when(repository.save(any(CampusResource.class))).thenReturn(resource);

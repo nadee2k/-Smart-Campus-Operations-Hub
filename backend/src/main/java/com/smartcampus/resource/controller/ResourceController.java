@@ -100,6 +100,13 @@ public class ResourceController {
         return ResponseEntity.ok(resourceService.update(id, request));
     }
 
+    @PostMapping("/{id}/clone")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResourceResponse> cloneResource(@PathVariable Long id) {
+        ResourceResponse cloned = resourceService.cloneResource(id);
+        return ResponseEntity.status(HttpStatus.CREATED).body(cloned);
+    }
+
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResourceResponse> toggleStatus(@PathVariable Long id) {
