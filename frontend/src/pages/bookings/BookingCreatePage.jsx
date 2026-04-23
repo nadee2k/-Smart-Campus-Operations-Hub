@@ -175,7 +175,7 @@ function SuggestionPanel({ suggestions, onPick, loading }) {
     return (
       <div className="rounded-2xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 p-5 flex items-center gap-3">
         <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
-        <p className="text-sm text-amber-700 dark:text-amber-300">Finding available alternatives…</p>
+        <p className="text-sm text-amber-700 dark:text-amber-300">Analyzing patterns and finding the best alternatives…</p>
       </div>
     );
   }
@@ -185,30 +185,86 @@ function SuggestionPanel({ suggestions, onPick, loading }) {
   return (
     <div className="rounded-2xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 p-5 space-y-3">
       <div className="flex items-center gap-2">
-        <AlertTriangle className="h-5 w-5 text-amber-500" />
+        <Sparkles className="h-5 w-5 text-amber-500" />
         <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-          This slot is taken. Here are available alternatives:
+          Smart Time Slot Suggestions
         </p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <p className="text-xs text-amber-700 dark:text-amber-300 ml-7">
+        Based on historical booking patterns, these times have excellent availability
+      </p>
+      <div className="grid gap-3">
         {suggestions.map((s, i) => {
           const st = s.start || s.startTime;
           const et = s.end || s.endTime;
+          const score = s.score ? Math.round(s.score) : 0;
+          const reasoning = s.reasoning || '';
+          
           return (
             <button
               key={i}
               type="button"
               onClick={() => onPick(s)}
-              className="flex items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-700/50 bg-white dark:bg-gray-900 px-4 py-3 text-left hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md transition-all group"
+              className="group relative rounded-xl border border-amber-200 dark:border-amber-700/50 bg-white dark:bg-gray-900 px-4 py-3 text-left hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-lg hover:scale-[1.02] transition-all overflow-hidden"
             >
-              <Sparkles className="h-4 w-4 text-indigo-400 group-hover:text-zinc-600 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {formatDate(st)}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {formatTime(st)} – {formatTime(et)}
-                </p>
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/0 to-indigo-500/0 group-hover:from-indigo-500/5 group-hover:via-indigo-500/5 group-hover:to-indigo-500/5 transition-all" />
+              
+              <div className="relative flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                      {formatDate(st)}
+                    </p>
+                    <span className="text-xs font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full">
+                      #{i + 1} Match
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mb-2">
+                    {formatTime(st)} – {formatTime(et)}
+                  </p>
+                  {reasoning && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug">
+                      💡 {reasoning}
+                    </p>
+                  )}
+                </div>
+                
+                {score > 0 && (
+                  <div className="flex flex-col items-center gap-1 shrink-0 pt-1">
+                    <div className="relative w-12 h-12 flex items-center justify-center">
+                      <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r="15.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          className="text-gray-200 dark:text-gray-700"
+                        />
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r="15.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeDasharray={`${score * 0.97} 100`}
+                          className={`${
+                            score >= 80
+                              ? 'text-emerald-500'
+                              : score >= 60
+                              ? 'text-amber-500'
+                              : 'text-orange-500'
+                          } transition-all`}
+                        />
+                      </svg>
+                      <span className="absolute text-xs font-bold text-gray-700 dark:text-gray-300">
+                        {score}%
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </button>
           );
