@@ -14,6 +14,7 @@ import com.smartcampus.common.exception.ResourceNotFoundException;
 import com.smartcampus.notification.service.NotificationService;
 import com.smartcampus.resource.entity.CampusResource;
 import com.smartcampus.resource.repository.CampusResourceRepository;
+import com.smartcampus.resource.service.ResourceWatchService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,17 +33,20 @@ public class BookingServiceImpl implements BookingService {
     private final CampusResourceRepository resourceRepository;
     private final UserService userService;
     private final NotificationService notificationService;
+    private final ResourceWatchService resourceWatchService;
     private final ActivityLogService activityLogService;
 
     public BookingServiceImpl(BookingRepository bookingRepository,
                               CampusResourceRepository resourceRepository,
                               UserService userService,
                               NotificationService notificationService,
+                              ResourceWatchService resourceWatchService,
                               ActivityLogService activityLogService) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
         this.userService = userService;
         this.notificationService = notificationService;
+        this.resourceWatchService = resourceWatchService;
         this.activityLogService = activityLogService;
     }
 
@@ -146,6 +150,7 @@ public class BookingServiceImpl implements BookingService {
                 "BOOKING_REJECTED",
                 "Your booking for " + booking.getResource().getName() + " has been rejected.",
                 "BOOKING", booking.getId());
+        resourceWatchService.notifyWatchersResourceAvailable(saved);
 
         return toResponse(saved);
     }
@@ -164,6 +169,7 @@ public class BookingServiceImpl implements BookingService {
         }
         Booking saved = bookingRepository.save(booking);
         activityLogService.log(userId, booking.getUser().getName(), "BOOKING_CANCELLED", "BOOKING", saved.getId(), "Cancelled booking for " + booking.getResource().getName());
+        resourceWatchService.notifyWatchersResourceAvailable(saved);
         return toResponse(saved);
     }
 
@@ -199,8 +205,10 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getSuggestions(Long resourceId, java.time.LocalDate date, int durationMinutes) {
-        List<Map<String, Object>> suggestions = new ArrayList<>();
-        for (int dayOffset = 0; dayOffset < 3 && suggestions.size() < 5; dayOffset++) {
+        List<Map<String, Object>> allSlots = new ArrayList<>();
+        
+        // Collect all available slots across next 3 days
+        for (int dayOffset = 0; dayOffset < 3; dayOffset++) {
             java.time.LocalDate checkDate = date.plusDays(dayOffset);
             LocalDateTime dayStart = checkDate.atTime(8, 0);
             LocalDateTime dayEnd = checkDate.atTime(22, 0);
@@ -215,26 +223,206 @@ public class BookingServiceImpl implements BookingService {
                 LocalDateTime slotEnd = slotStart.plusMinutes(durationMinutes);
                 if (!slotEnd.isAfter(b.getStartTime()) && !slotEnd.isAfter(dayEnd)) {
                     Map<String, Object> slot = new HashMap<>();
-                    slot.put("start", slotStart.toString());
-                    slot.put("end", slotEnd.toString());
-                    slot.put("date", checkDate.toString());
-                    suggestions.add(slot);
-                    if (suggestions.size() >= 5) break;
+                    slot.put("start", slotStart);
+                    slot.put("end", slotEnd);
+                    slot.put("date", checkDate);
+                    allSlots.add(slot);
                 }
                 slotStart = b.getEndTime();
             }
-            if (suggestions.size() < 5) {
+            if (allSlots.size() < 15) { // Collect more slots for ranking
                 LocalDateTime slotEnd = slotStart.plusMinutes(durationMinutes);
                 if (!slotEnd.isAfter(dayEnd)) {
                     Map<String, Object> slot = new HashMap<>();
-                    slot.put("start", slotStart.toString());
-                    slot.put("end", slotEnd.toString());
-                    slot.put("date", checkDate.toString());
-                    suggestions.add(slot);
+                    slot.put("start", slotStart);
+                    slot.put("end", slotEnd);
+                    slot.put("date", checkDate);
+                    allSlots.add(slot);
                 }
             }
         }
-        return suggestions;
+        
+        // Calculate historical patterns for scoring
+        Map<Integer, Double> hourlyUtilization = calculateHourlyUtilization(resourceId);
+        Map<Integer, Double> dayOfWeekUtilization = calculateDayOfWeekUtilization(resourceId);
+        
+        // Score and rank all slots
+        for (Map<String, Object> slot : allSlots) {
+            LocalDateTime startTime = (LocalDateTime) slot.get("start");
+            int hour = startTime.getHour();
+            int dayOfWeek = startTime.getDayOfWeek().getValue();
+            
+            // Calculate score based on multiple factors
+            double score = calculateSlotScore(
+                    hour, 
+                    dayOfWeek,
+                    hourlyUtilization,
+                    dayOfWeekUtilization,
+                    resourceId,
+                    durationMinutes
+            );
+            
+            slot.put("score", score);
+            slot.put("start", startTime.toString());
+            slot.put("end", ((LocalDateTime) slot.get("end")).toString());
+            slot.put("date", slot.get("date").toString());
+            slot.put("reasoning", generateReasoning(hour, dayOfWeek, hourlyUtilization, dayOfWeekUtilization));
+        }
+        
+        // Sort by score (highest first) and return top 5
+        return allSlots.stream()
+                .sorted((a, b) -> Double.compare((Double)b.get("score"), (Double)a.get("score")))
+                .limit(5)
+                .toList();
+    }
+
+    /**
+     * Calculate hourly utilization patterns based on historical bookings
+     */
+    private Map<Integer, Double> calculateHourlyUtilization(Long resourceId) {
+        Map<Integer, Double> hourlyStats = new HashMap<>();
+        List<Booking> allBookings = bookingRepository.findByResourceIdAndStartTimeBetween(
+                resourceId,
+                LocalDateTime.now().minusDays(90),
+                LocalDateTime.now()
+        );
+        
+        // Count bookings per hour
+        Map<Integer, Integer> hourCounts = new HashMap<>();
+        for (int i = 8; i < 22; i++) hourCounts.put(i, 0);
+        
+        for (Booking b : allBookings) {
+            if (b.getStatus() == BookingStatus.APPROVED || b.getStatus() == BookingStatus.PENDING) {
+                int hour = b.getStartTime().getHour();
+                if (hour >= 8 && hour < 22) {
+                    hourCounts.put(hour, hourCounts.get(hour) + 1);
+                }
+            }
+        }
+        
+        // Normalize to 0-1 scale
+        int maxCount = hourCounts.values().stream().max(Integer::compareTo).orElse(1);
+        for (int i = 8; i < 22; i++) {
+            hourlyStats.put(i, maxCount > 0 ? (double) hourCounts.get(i) / maxCount : 0.5);
+        }
+        
+        return hourlyStats;
+    }
+
+    /**
+     * Calculate day-of-week utilization patterns based on historical bookings
+     */
+    private Map<Integer, Double> calculateDayOfWeekUtilization(Long resourceId) {
+        Map<Integer, Double> dayStats = new HashMap<>();
+        List<Booking> allBookings = bookingRepository.findByResourceIdAndStartTimeBetween(
+                resourceId,
+                LocalDateTime.now().minusDays(90),
+                LocalDateTime.now()
+        );
+        
+        // Count bookings per day of week (1=Monday, 7=Sunday)
+        Map<Integer, Integer> dayCounts = new HashMap<>();
+        for (int i = 1; i <= 7; i++) dayCounts.put(i, 0);
+        
+        for (Booking b : allBookings) {
+            if (b.getStatus() == BookingStatus.APPROVED || b.getStatus() == BookingStatus.PENDING) {
+                int dayOfWeek = b.getStartTime().getDayOfWeek().getValue();
+                dayCounts.put(dayOfWeek, dayCounts.get(dayOfWeek) + 1);
+            }
+        }
+        
+        // Normalize to 0-1 scale
+        int maxCount = dayCounts.values().stream().max(Integer::compareTo).orElse(1);
+        for (int i = 1; i <= 7; i++) {
+            dayStats.put(i, maxCount > 0 ? (double) dayCounts.get(i) / maxCount : 0.5);
+        }
+        
+        return dayStats;
+    }
+
+    /**
+     * Calculate desirability score for a time slot based on historical patterns.
+     * Higher score means better time slot (based on demand patterns and utilization)
+     */
+    private double calculateSlotScore(int hour, int dayOfWeek, 
+                                      Map<Integer, Double> hourlyUtilization,
+                                      Map<Integer, Double> dayOfWeekUtilization,
+                                      Long resourceId, int durationMinutes) {
+        double score = 0.0;
+        
+        // Factor 1: Hourly pattern (40% weight) - prefer moderately busy times
+        double hourlyScore = hourlyUtilization.getOrDefault(hour, 0.5);
+        // Prefer times with moderate utilization (0.3-0.7), not too empty or too crowded
+        double hourlyDesirability = 1.0 - Math.abs(hourlyScore - 0.5) * 0.5;
+        score += hourlyDesirability * 0.40;
+        
+        // Factor 2: Day-of-week pattern (30% weight)
+        double dayScore = dayOfWeekUtilization.getOrDefault(dayOfWeek, 0.5);
+        double dayDesirability = 1.0 - Math.abs(dayScore - 0.5) * 0.5;
+        score += dayDesirability * 0.30;
+        
+        // Factor 3: Time preference (20% weight) - prefer mid-day slots (10 AM - 4 PM)
+        double timePreference = 0.0;
+        if (hour >= 10 && hour <= 16) {
+            timePreference = 1.0 - (Math.abs(hour - 13) / 6.0); // Peak at 1 PM
+        } else if (hour >= 8 && hour <= 22) {
+            timePreference = 0.3; // Other hours still acceptable
+        }
+        score += timePreference * 0.20;
+        
+        // Factor 4: Availability bonus (10% weight)
+        // Slots that are moderately filled are more available (less competition)
+        double availabilityBonus = 0.2;
+        score += availabilityBonus * 0.10;
+        
+        // Normalize to 0-100 scale
+        return Math.min(100.0, score * 100);
+    }
+
+    /**
+     * Generate a human-readable reasoning for why this slot is recommended
+     */
+    private String generateReasoning(int hour, int dayOfWeek,
+                                    Map<Integer, Double> hourlyUtilization,
+                                    Map<Integer, Double> dayOfWeekUtilization) {
+        StringBuilder reasoning = new StringBuilder();
+        
+        String dayName = getDayName(dayOfWeek);
+        double hourUtil = hourlyUtilization.getOrDefault(hour, 0.5);
+        double dayUtil = dayOfWeekUtilization.getOrDefault(dayOfWeek, 0.5);
+        
+        reasoning.append(dayName).append(" at ");
+        reasoning.append(String.format("%02d:00 - ", hour));
+        
+        // Add insights
+        if (hour >= 10 && hour <= 16) {
+            reasoning.append("Peak business hours with good availability");
+        } else if (hour >= 8 && hour < 10) {
+            reasoning.append("Early morning slot, likely available");
+        } else if (hour > 16) {
+            reasoning.append("Late afternoon/evening, typically less busy");
+        }
+        
+        if (hourUtil < 0.4) {
+            reasoning.append(". Historically under-utilized time.");
+        } else if (hourUtil > 0.7) {
+            reasoning.append(". Popular time slot.");
+        }
+        
+        return reasoning.toString();
+    }
+
+    private String getDayName(int dayOfWeek) {
+        return switch (dayOfWeek) {
+            case 1 -> "Monday";
+            case 2 -> "Tuesday";
+            case 3 -> "Wednesday";
+            case 4 -> "Thursday";
+            case 5 -> "Friday";
+            case 6 -> "Saturday";
+            case 7 -> "Sunday";
+            default -> "Unknown";
+        };
     }
 
     private void validateTransition(Booking booking, BookingStatus target) {

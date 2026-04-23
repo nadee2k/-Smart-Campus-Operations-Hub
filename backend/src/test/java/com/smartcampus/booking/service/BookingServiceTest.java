@@ -1,5 +1,6 @@
 package com.smartcampus.booking.service;
 
+import com.smartcampus.activity.service.ActivityLogService;
 import com.smartcampus.auth.entity.Role;
 import com.smartcampus.auth.entity.User;
 import com.smartcampus.auth.service.UserService;
@@ -15,6 +16,7 @@ import com.smartcampus.notification.service.NotificationService;
 import com.smartcampus.resource.entity.CampusResource;
 import com.smartcampus.resource.entity.ResourceType;
 import com.smartcampus.resource.repository.CampusResourceRepository;
+import com.smartcampus.resource.service.ResourceWatchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +42,8 @@ class BookingServiceTest {
     @Mock private CampusResourceRepository resourceRepository;
     @Mock private UserService userService;
     @Mock private NotificationService notificationService;
+    @Mock private ResourceWatchService resourceWatchService;
+    @Mock private ActivityLogService activityLogService;
 
     @InjectMocks
     private BookingServiceImpl service;
@@ -153,6 +157,7 @@ class BookingServiceTest {
 
         verify(notificationService).sendNotification(
                 anyLong(), eq("BOOKING_REJECTED"), any(), eq("BOOKING"), eq(1L));
+        verify(resourceWatchService).notifyWatchersResourceAvailable(any(Booking.class));
     }
 
     @Test
@@ -171,5 +176,6 @@ class BookingServiceTest {
         BookingResponse result = service.cancel(1L, 1L, "User requested cancellation");
 
         verify(bookingRepository).save(any(Booking.class));
+        verify(resourceWatchService).notifyWatchersResourceAvailable(any(Booking.class));
     }
 }

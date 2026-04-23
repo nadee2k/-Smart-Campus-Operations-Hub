@@ -49,6 +49,12 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     Page<Ticket> findByResourceId(Long resourceId, Pageable pageable);
 
+    List<Ticket> findByResourceIdAndCreatedAtBetween(Long resourceId, LocalDateTime start, LocalDateTime end);
+
+    long countByResourceIdAndStatusInAndUpdatedAtBetween(Long resourceId, List<TicketStatus> statuses, LocalDateTime start, LocalDateTime end);
+
+    long countByResourceIdAndStatusNotIn(Long resourceId, List<TicketStatus> statuses);
+
     @Query(value = "SELECT COUNT(*) FROM tickets WHERE sla_deadline < NOW() AND status NOT IN ('RESOLVED', 'CLOSED')",
            nativeQuery = true)
     long countSlaBreaches();
