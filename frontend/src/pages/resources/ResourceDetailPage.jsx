@@ -27,6 +27,7 @@ import {
   Download,
   Bell,
   BellRing,
+  Power,
 } from 'lucide-react';
 
 function formatTime(val) {
@@ -85,6 +86,7 @@ export default function ResourceDetailPage() {
   const [watchStatus, setWatchStatus] = useState(null);
   const [watchLoading, setWatchLoading] = useState(true);
   const [watchSaving, setWatchSaving] = useState(false);
+  const [statusSaving, setStatusSaving] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -168,6 +170,23 @@ export default function ResourceDetailPage() {
     }
   };
 
+  const handleToggleStatus = async () => {
+    try {
+      setStatusSaving(true);
+      const res = await resourceService.toggleStatus(id);
+      setResource(res.data);
+      toast.success(
+        res.data.status === 'ACTIVE'
+          ? 'Resource marked active'
+          : 'Resource marked out of service'
+      );
+    } catch {
+      toast.error('Unable to update resource status right now');
+    } finally {
+      setStatusSaving(false);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner size="lg" />;
   }
@@ -240,6 +259,22 @@ export default function ResourceDetailPage() {
           )}
           {isAdmin && (
             <>
+              <button
+                onClick={handleToggleStatus}
+                disabled={statusSaving}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  resource.status === 'ACTIVE'
+                    ? 'border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20'
+                    : 'border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
+                }`}
+              >
+                <Power className="h-4 w-4" />
+                {statusSaving
+                  ? 'Updating...'
+                  : resource.status === 'ACTIVE'
+                    ? 'Mark Out of Service'
+                    : 'Mark Active'}
+              </button>
               <Link
                 to={`/resources/${resource.id}/edit`}
                 className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"

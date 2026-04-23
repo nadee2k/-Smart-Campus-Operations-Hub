@@ -166,6 +166,18 @@ class CampusResourceServiceTest {
     }
 
     @Test
+    void toggleStatus_shouldFlipBetweenActiveAndOutOfService() {
+        when(repository.findById(1L)).thenReturn(Optional.of(resource));
+        when(repository.save(any(CampusResource.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResourceResponse firstResult = service.toggleStatus(1L);
+        assertThat(firstResult.status()).isEqualTo(ResourceStatus.OUT_OF_SERVICE);
+
+        ResourceResponse secondResult = service.toggleStatus(1L);
+        assertThat(secondResult.status()).isEqualTo(ResourceStatus.ACTIVE);
+    }
+
+    @Test
     void getWeeklyReport_shouldBuildSummaryFromBookingsAndTickets() {
         Booking approvedBooking = new Booking();
         approvedBooking.setStatus(BookingStatus.APPROVED);

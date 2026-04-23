@@ -270,6 +270,27 @@ public class CampusResourceServiceImpl implements CampusResourceService {
     @Override
     @Transactional
     @CacheEvict(value = "resources", allEntries = true)
+    public ResourceResponse toggleStatus(Long id) {
+        CampusResource resource = findActiveById(id);
+        ResourceStatus nextStatus = resource.getStatus() == ResourceStatus.OUT_OF_SERVICE
+                ? ResourceStatus.ACTIVE
+                : ResourceStatus.OUT_OF_SERVICE;
+        resource.setStatus(nextStatus);
+        CampusResource saved = repository.save(resource);
+        activityLogService.log(
+                null,
+                "Admin",
+                "RESOURCE_STATUS_TOGGLED",
+                "RESOURCE",
+                saved.getId(),
+                "Changed resource status to " + saved.getStatus() + " for " + saved.getName()
+        );
+        return toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "resources", allEntries = true)
     public void delete(Long id) {
         CampusResource resource = findActiveById(id);
         resource.setDeleted(true);

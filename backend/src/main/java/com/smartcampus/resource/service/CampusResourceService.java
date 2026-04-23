@@ -24,5 +24,7 @@ public interface CampusResourceService {
 
     ResourceResponse update(Long id, ResourceRequest request);
 
+    ResourceResponse toggleStatus(Long id);
+
     void delete(Long id);
 }

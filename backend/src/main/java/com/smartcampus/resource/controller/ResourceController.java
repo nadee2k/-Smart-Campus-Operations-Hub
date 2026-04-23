@@ -100,6 +100,12 @@ public class ResourceController {
         return ResponseEntity.ok(resourceService.update(id, request));
     }
 
+    @PatchMapping("/{id}/toggle-status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResourceResponse> toggleStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(resourceService.toggleStatus(id));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
