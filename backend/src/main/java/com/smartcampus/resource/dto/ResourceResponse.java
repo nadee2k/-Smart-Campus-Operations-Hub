@@ -13,6 +13,7 @@ public record ResourceResponse(
         ResourceType type,
         Integer capacity,
         String location,
+        String description,
         List<String> amenities,
         List<String> photoUrls,
         String layoutMapUrl,

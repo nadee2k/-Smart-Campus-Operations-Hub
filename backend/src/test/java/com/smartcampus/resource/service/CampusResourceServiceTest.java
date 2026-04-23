@@ -67,6 +67,7 @@ class CampusResourceServiceTest {
         resource.setType(ResourceType.LECTURE_HALL);
         resource.setCapacity(200);
         resource.setLocation("Building A");
+        resource.setDescription("Large lecture hall for academic sessions.");
         resource.setAvailabilityStartTime(LocalTime.of(8, 0));
         resource.setAvailabilityEndTime(LocalTime.of(18, 0));
         resource.setStatus(ResourceStatus.ACTIVE);
@@ -79,6 +80,7 @@ class CampusResourceServiceTest {
         request.setType(ResourceType.LECTURE_HALL);
         request.setCapacity(200);
         request.setLocation("Building A");
+        request.setDescription("Large lecture hall for academic sessions.");
     }
 
     @Test
@@ -91,6 +93,7 @@ class CampusResourceServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.name()).isEqualTo("Main Hall");
         assertThat(result.type()).isEqualTo(ResourceType.LECTURE_HALL);
+        assertThat(result.description()).isEqualTo("Large lecture hall for academic sessions.");
         verify(repository).save(any(CampusResource.class));
     }
 

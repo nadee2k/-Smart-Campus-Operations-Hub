@@ -434,6 +434,7 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                 resource.getType(),
                 resource.getCapacity(),
                 resource.getLocation(),
+                resource.getDescription(),
                 resource.getAmenities(),
                 resource.getPhotoUrls(),
                 resource.getLayoutMapUrl(),

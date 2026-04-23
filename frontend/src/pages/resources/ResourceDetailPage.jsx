@@ -352,6 +352,18 @@ export default function ResourceDetailPage() {
 
           <div className="flex items-start gap-3 sm:col-span-2">
             <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 shrink-0">
+              <FileText className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Description</p>
+              <p className="font-medium text-gray-900 dark:text-white whitespace-pre-wrap">
+                {resource.description || '-'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 sm:col-span-2">
+            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 shrink-0">
               <Clock className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </div>
             <div>

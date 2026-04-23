@@ -311,6 +311,7 @@ public class CampusResourceServiceImpl implements CampusResourceService {
         return new ResourceResponse(
                 r.getId(), r.getName(), r.getType(), r.getCapacity(),
                 r.getLocation(),
+                r.getDescription(),
                 copyList(r.getAmenities()),
                 copyList(r.getPhotoUrls()),
                 r.getLayoutMapUrl(),

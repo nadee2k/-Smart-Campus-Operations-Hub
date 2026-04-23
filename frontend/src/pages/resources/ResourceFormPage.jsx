@@ -45,6 +45,7 @@ export default function ResourceFormPage() {
     type: '',
     capacity: 0,
     location: '',
+    description: '',
     amenities: '',
     ownerName: '',
     department: '',
@@ -73,6 +74,7 @@ export default function ResourceFormPage() {
             type: r.type || '',
             capacity: r.capacity ?? 0,
             location: r.location || '',
+            description: r.description || '',
             amenities: (r.amenities || []).join(', '),
             ownerName: r.ownerName || '',
             department: r.department || '',
@@ -118,6 +120,7 @@ export default function ResourceFormPage() {
       type: form.type,
       capacity: Number(form.capacity),
       location: form.location?.trim() || null,
+      description: form.description?.trim() || null,
       amenities: form.amenities
         ? form.amenities.split(',').map((s) => s.trim()).filter(Boolean)
         : [],
@@ -250,6 +253,19 @@ export default function ResourceFormPage() {
               onChange={(e) => update('location', e.target.value)}
               className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               placeholder="Building, room, etc."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Description
+            </label>
+            <textarea
+              rows={4}
+              value={form.description}
+              onChange={(e) => update('description', e.target.value)}
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              placeholder="Add a short description of what this resource is best used for."
             />
           </div>
 
