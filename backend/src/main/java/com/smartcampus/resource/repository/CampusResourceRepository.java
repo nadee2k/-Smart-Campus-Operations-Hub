@@ -33,4 +33,6 @@ public interface CampusResourceRepository extends JpaRepository<CampusResource, 
             Pageable pageable);
 
     Page<CampusResource> findByDeletedFalse(Pageable pageable);
+
+    java.util.List<CampusResource> findByDeletedFalse();
 }

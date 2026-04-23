@@ -5,13 +5,19 @@ import com.smartcampus.analytics.dto.DayOfWeekPatternData;
 import com.smartcampus.analytics.dto.HourlyPatternData;
 import com.smartcampus.analytics.dto.MostBookedResource;
 import com.smartcampus.analytics.dto.PeakHourData;
+import com.smartcampus.analytics.dto.ResourceReportCardSummary;
 import com.smartcampus.analytics.service.AnalyticsService;
 import com.smartcampus.analytics.service.BookingPatternsService;
+import com.smartcampus.analytics.service.ResourceReportCardService;
 import com.smartcampus.config.security.AuthUtil;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -21,11 +27,14 @@ public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
     private final BookingPatternsService bookingPatternsService;
+    private final ResourceReportCardService resourceReportCardService;
 
     public AnalyticsController(AnalyticsService analyticsService,
-                               BookingPatternsService bookingPatternsService) {
+                               BookingPatternsService bookingPatternsService,
+                               ResourceReportCardService resourceReportCardService) {
         this.analyticsService = analyticsService;
         this.bookingPatternsService = bookingPatternsService;
+        this.resourceReportCardService = resourceReportCardService;
     }
 
     @GetMapping("/dashboard")
@@ -98,4 +107,29 @@ public class AnalyticsController {
     public ResponseEntity<Map<String, Object>> getBookingStatistics(@PathVariable Long resourceId) {
         return ResponseEntity.ok(bookingPatternsService.getBookingStatistics(resourceId));
     }
+
+    @GetMapping("/resources/{resourceId}/report-card")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResourceReportCardSummary> getResourceReportCard(
+            @PathVariable Long resourceId,
+            @RequestParam(required = false) LocalDate weekStartDate) {
+        return ResponseEntity.ok(resourceReportCardService.getWeeklyReportCard(resourceId, weekStartDate));
+    }
+
+    @GetMapping("/resources/{resourceId}/report-card.pdf")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<byte[]> getResourceReportCardPdf(
+            @PathVariable Long resourceId,
+            @RequestParam(required = false) LocalDate weekStartDate) {
+        byte[] pdf = resourceReportCardService.getWeeklyReportCardPdf(resourceId, weekStartDate);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename("resource-" + resourceId + "-report-card.pdf")
+                .build());
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(pdf);
+    }
+
 }
