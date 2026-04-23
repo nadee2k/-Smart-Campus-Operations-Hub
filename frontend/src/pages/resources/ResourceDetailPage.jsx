@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { resourceService } from '../../services/resourceService';
 import { ticketService } from '../../services/ticketService';
 import { useAuth } from '../../context/AuthContext';
@@ -22,11 +23,14 @@ import {
   Wrench,
   ChevronDown,
   ChevronUp,
+  FileText,
+  Download,
 } from 'lucide-react';
 
 function formatTime(val) {
-  if (!val) return '—';
-  let h, m;
+  if (!val) return '-';
+  let h;
+  let m;
   if (typeof val === 'string') {
     const parts = val.split(':');
     h = parseInt(parts[0], 10);
@@ -35,7 +39,7 @@ function formatTime(val) {
     h = val.hour;
     m = String(val.minute ?? 0).padStart(2, '0');
   } else {
-    return '—';
+    return '-';
   }
   const ampm = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 || 12;
@@ -43,9 +47,19 @@ function formatTime(val) {
 }
 
 function formatDateTime(dateStr) {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   const d = new Date(dateStr);
   return d.toLocaleString();
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 function getMaintenanceTone(score = 100) {
@@ -63,17 +77,29 @@ export default function ResourceDetailPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [workHistory, setWorkHistory] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [weeklyReport, setWeeklyReport] = useState(null);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [reportDownloading, setReportDownloading] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     resourceService
       .getById(id)
       .then((res) => setResource(res.data))
       .catch(() => setResource(null))
       .finally(() => setLoading(false));
 
-    ticketService.getResourceHistory(id, { page: 0, size: 5 })
+    ticketService
+      .getResourceHistory(id, { page: 0, size: 5 })
       .then((res) => setWorkHistory(res.data.content ?? []))
       .catch(() => {});
+
+    setReportLoading(true);
+    resourceService
+      .getWeeklyReport(id)
+      .then((res) => setWeeklyReport(res.data))
+      .catch(() => setWeeklyReport(null))
+      .finally(() => setReportLoading(false));
   }, [id]);
 
   const handleDelete = () => {
@@ -83,6 +109,28 @@ export default function ResourceDetailPage() {
         navigate('/resources');
       })
       .catch(() => {});
+  };
+
+  const handleDownloadWeeklyReport = async () => {
+    try {
+      setReportDownloading(true);
+      const res = await resourceService.downloadWeeklyReport(id);
+      const filename =
+        res.headers['content-disposition']?.match(/filename="(.+)"/)?.[1] ||
+        `resource-${id}-weekly-report.pdf`;
+      const blobUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch {
+      toast.error('Unable to download weekly report right now');
+    } finally {
+      setReportDownloading(false);
+    }
   };
 
   if (loading) {
@@ -108,8 +156,8 @@ export default function ResourceDetailPage() {
   const availabilityEnd = resource.availabilityEndTime;
   const availabilityStr =
     availabilityStart && availabilityEnd
-      ? `${formatTime(typeof availabilityStart === 'string' ? availabilityStart : availabilityStart)} – ${formatTime(typeof availabilityEnd === 'string' ? availabilityEnd : availabilityEnd)}`
-      : '—';
+      ? `${formatTime(availabilityStart)} - ${formatTime(availabilityEnd)}`
+      : '-';
   const amenities = resource.amenities || [];
   const photoUrls = resource.photoUrls || [];
   const maintenanceScore = getResourceHealthScore(resource);
@@ -176,7 +224,7 @@ export default function ResourceDetailPage() {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Type</p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {resource.type?.replace(/_/g, ' ') || '—'}
+                {resource.type?.replace(/_/g, ' ') || '-'}
               </p>
             </div>
           </div>
@@ -197,9 +245,7 @@ export default function ResourceDetailPage() {
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Location</p>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {resource.location || '—'}
-              </p>
+              <p className="font-medium text-gray-900 dark:text-white">{resource.location || '-'}</p>
             </div>
           </div>
 
@@ -232,7 +278,7 @@ export default function ResourceDetailPage() {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Owner / Department</p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {resource.ownerName || '—'} {resource.department ? `• ${resource.department}` : ''}
+                {resource.ownerName || '-'} {resource.department ? `• ${resource.department}` : ''}
               </p>
             </div>
           </div>
@@ -243,9 +289,7 @@ export default function ResourceDetailPage() {
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Created</p>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {formatDateTime(resource.createdAt)}
-              </p>
+              <p className="font-medium text-gray-900 dark:text-white">{formatDateTime(resource.createdAt)}</p>
             </div>
           </div>
 
@@ -255,9 +299,7 @@ export default function ResourceDetailPage() {
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Updated</p>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {formatDateTime(resource.updatedAt)}
-              </p>
+              <p className="font-medium text-gray-900 dark:text-white">{formatDateTime(resource.updatedAt)}</p>
             </div>
           </div>
         </div>
@@ -325,7 +367,82 @@ export default function ResourceDetailPage() {
         </div>
       </div>
 
-      {/* Work History */}
+      <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10">
+              <FileText className="h-5 w-5 text-blue-700 dark:text-blue-300" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Weekly Resource Report Card</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Auto-generated summary for {weeklyReport ? `${formatDate(weeklyReport.weekStart)} to ${formatDate(weeklyReport.weekEnd)}` : 'this week'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleDownloadWeeklyReport}
+            disabled={reportDownloading || !weeklyReport}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            {reportDownloading ? 'Preparing PDF...' : 'Download PDF'}
+          </button>
+        </div>
+
+        {reportLoading ? (
+          <div className="mt-6">
+            <LoadingSpinner />
+          </div>
+        ) : weeklyReport ? (
+          <>
+            <p className="mt-5 text-sm leading-6 text-gray-600 dark:text-gray-300">
+              {weeklyReport.operationalSummary}
+            </p>
+
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {[
+                { label: 'Bookings', value: weeklyReport.totalBookings, subtext: `${weeklyReport.approvedBookings} approved` },
+                { label: 'Reserved Hours', value: weeklyReport.totalReservedHours, subtext: `${weeklyReport.averageAttendees} avg attendees` },
+                { label: 'Check-ins', value: `${weeklyReport.checkInRate}%`, subtext: `${weeklyReport.checkedInBookings} completed` },
+                { label: 'Tickets', value: weeklyReport.ticketsOpened, subtext: `${weeklyReport.ticketsResolved} resolved this week` },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 p-4"
+                >
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.label}</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{item.value}</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.subtext}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Peak day</p>
+                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestDay}</p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Peak time</p>
+                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestTimeRange}</p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Utilization band</p>
+                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.utilizationBand}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {weeklyReport.openTickets} active maintenance ticket{weeklyReport.openTickets !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+            Weekly report data is unavailable right now.
+          </p>
+        )}
+      </div>
+
       <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         <button
           onClick={() => setHistoryOpen(!historyOpen)}
@@ -337,10 +454,16 @@ export default function ResourceDetailPage() {
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-white">Maintenance History</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{workHistory.length} past issue{workHistory.length !== 1 ? 's' : ''} for this resource</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {workHistory.length} past issue{workHistory.length !== 1 ? 's' : ''} for this resource
+              </p>
             </div>
           </div>
-          {historyOpen ? <ChevronUp className="h-5 w-5 text-gray-400" /> : <ChevronDown className="h-5 w-5 text-gray-400" />}
+          {historyOpen ? (
+            <ChevronUp className="h-5 w-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-gray-400" />
+          )}
         </button>
 
         {historyOpen && (
@@ -356,7 +479,7 @@ export default function ResourceDetailPage() {
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      #{t.id} — {t.category?.replace(/_/g, ' ')}
+                      #{t.id} - {t.category?.replace(/_/g, ' ')}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t.description}</p>
                   </div>

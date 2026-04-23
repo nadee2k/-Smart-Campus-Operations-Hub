@@ -3,13 +3,16 @@ package com.smartcampus.resource.controller;
 import com.smartcampus.common.dto.PageResponse;
 import com.smartcampus.resource.dto.ResourceRequest;
 import com.smartcampus.resource.dto.ResourceResponse;
+import com.smartcampus.resource.dto.WeeklyResourceReportResponse;
 import com.smartcampus.resource.entity.ResourceStatus;
 import com.smartcampus.resource.entity.ResourceType;
 import com.smartcampus.resource.service.CampusResourceService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +36,23 @@ public class ResourceController {
     @GetMapping("/{id}")
     public ResponseEntity<ResourceResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(resourceService.getById(id));
+    }
+
+    @GetMapping("/{id}/weekly-report")
+    public ResponseEntity<WeeklyResourceReportResponse> getWeeklyReport(@PathVariable Long id) {
+        return ResponseEntity.ok(resourceService.getWeeklyReport(id));
+    }
+
+    @GetMapping("/{id}/weekly-report.pdf")
+    public ResponseEntity<byte[]> downloadWeeklyReportPdf(@PathVariable Long id) {
+        WeeklyResourceReportResponse report = resourceService.getWeeklyReport(id);
+        byte[] pdf = resourceService.generateWeeklyReportPdf(id);
+        String safeName = report.resourceName().replaceAll("[^a-zA-Z0-9-_]+", "-").toLowerCase();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeName + "-weekly-report.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 
     @GetMapping("/search")
