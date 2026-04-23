@@ -8,7 +8,7 @@ import UniOpsLogo from '../components/common/UniOpsLogo';
 import {
   LayoutDashboard, Building2, CalendarDays, Wrench, Bell,
   BarChart3, LogOut, Menu as MenuIcon, X, Sun, Moon, ChevronDown, User,
-  Users, Activity, ClipboardList, Calendar, QrCode, Settings, Sparkles
+  Users, Activity, ClipboardList, Calendar, QrCode, Settings, Sparkles, BellRing
 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -25,6 +25,7 @@ export default function DashboardLayout() {
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: true },
     { to: '/technician/workspace', label: 'My Workspace', icon: ClipboardList, show: isTechnician },
     { to: '/resources', label: 'Resources', icon: Building2, show: true },
+    { to: '/resources/watchlist', label: 'Watchlist', icon: BellRing, show: true },
     { to: '/assistant/resource', label: 'AI Assistant', icon: Sparkles, show: true },
     { to: isAdmin ? '/bookings/admin' : '/bookings', label: 'Bookings', icon: CalendarDays, show: isAdmin || isUser },
     { to: '/bookings/calendar', label: 'Calendar', icon: Calendar, show: isUser },

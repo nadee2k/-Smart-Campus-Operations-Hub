@@ -12,6 +12,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import ResourceListPage from './pages/resources/ResourceListPage';
 import ResourceDetailPage from './pages/resources/ResourceDetailPage';
 import ResourceFormPage from './pages/resources/ResourceFormPage';
+import ResourceWatchlistPage from './pages/resources/ResourceWatchlistPage';
 
 import BookingListPage from './pages/bookings/BookingListPage';
 import BookingCreatePage from './pages/bookings/BookingCreatePage';
@@ -52,6 +53,7 @@ export default function App() {
 
               {/* Resources */}
               <Route path="/resources" element={<ResourceListPage />} />
+              <Route path="/resources/watchlist" element={<ResourceWatchlistPage />} />
               <Route path="/resources/new" element={<ProtectedRoute roles={['ADMIN']}><ResourceFormPage /></ProtectedRoute>} />
               <Route path="/resources/:id" element={<ResourceDetailPage />} />
               <Route path="/resources/:id/edit" element={<ProtectedRoute roles={['ADMIN']}><ResourceFormPage /></ProtectedRoute>} />

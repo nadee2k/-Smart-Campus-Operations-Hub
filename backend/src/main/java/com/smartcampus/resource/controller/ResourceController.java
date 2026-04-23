@@ -4,6 +4,7 @@ import com.smartcampus.common.dto.PageResponse;
 import com.smartcampus.config.security.AuthUtil;
 import com.smartcampus.resource.dto.ResourceRequest;
 import com.smartcampus.resource.dto.ResourceResponse;
+import com.smartcampus.resource.dto.ResourceWatchListItemResponse;
 import com.smartcampus.resource.dto.ResourceWatchStatusResponse;
 import com.smartcampus.resource.dto.WeeklyResourceReportResponse;
 import com.smartcampus.resource.entity.ResourceStatus;
@@ -19,6 +20,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/resources")
@@ -42,6 +45,11 @@ public class ResourceController {
     @GetMapping("/{id}")
     public ResponseEntity<ResourceResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(resourceService.getById(id));
+    }
+
+    @GetMapping("/watchlist/my")
+    public ResponseEntity<List<ResourceWatchListItemResponse>> getMyWatchlist() {
+        return ResponseEntity.ok(resourceWatchService.getMyWatchlist(AuthUtil.getCurrentUserId()));
     }
 
     @GetMapping("/{id}/watch-status")
