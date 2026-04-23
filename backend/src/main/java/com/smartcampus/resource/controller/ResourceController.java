@@ -1,12 +1,15 @@
 package com.smartcampus.resource.controller;
 
 import com.smartcampus.common.dto.PageResponse;
+import com.smartcampus.config.security.AuthUtil;
 import com.smartcampus.resource.dto.ResourceRequest;
 import com.smartcampus.resource.dto.ResourceResponse;
+import com.smartcampus.resource.dto.ResourceWatchStatusResponse;
 import com.smartcampus.resource.dto.WeeklyResourceReportResponse;
 import com.smartcampus.resource.entity.ResourceStatus;
 import com.smartcampus.resource.entity.ResourceType;
 import com.smartcampus.resource.service.CampusResourceService;
+import com.smartcampus.resource.service.ResourceWatchService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -22,9 +25,12 @@ import org.springframework.web.bind.annotation.*;
 public class ResourceController {
 
     private final CampusResourceService resourceService;
+    private final ResourceWatchService resourceWatchService;
 
-    public ResourceController(CampusResourceService resourceService) {
+    public ResourceController(CampusResourceService resourceService,
+                              ResourceWatchService resourceWatchService) {
         this.resourceService = resourceService;
+        this.resourceWatchService = resourceWatchService;
     }
 
     @GetMapping
@@ -36,6 +42,22 @@ public class ResourceController {
     @GetMapping("/{id}")
     public ResponseEntity<ResourceResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(resourceService.getById(id));
+    }
+
+    @GetMapping("/{id}/watch-status")
+    public ResponseEntity<ResourceWatchStatusResponse> getWatchStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(resourceWatchService.getStatus(id, AuthUtil.getCurrentUserId()));
+    }
+
+    @PostMapping("/{id}/watch")
+    public ResponseEntity<ResourceWatchStatusResponse> watch(@PathVariable Long id) {
+        return ResponseEntity.ok(resourceWatchService.watch(id, AuthUtil.getCurrentUserId()));
+    }
+
+    @DeleteMapping("/{id}/watch")
+    public ResponseEntity<Void> unwatch(@PathVariable Long id) {
+        resourceWatchService.unwatch(id, AuthUtil.getCurrentUserId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/weekly-report")

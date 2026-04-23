@@ -14,6 +14,7 @@ import com.smartcampus.common.exception.ResourceNotFoundException;
 import com.smartcampus.notification.service.NotificationService;
 import com.smartcampus.resource.entity.CampusResource;
 import com.smartcampus.resource.repository.CampusResourceRepository;
+import com.smartcampus.resource.service.ResourceWatchService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,17 +33,20 @@ public class BookingServiceImpl implements BookingService {
     private final CampusResourceRepository resourceRepository;
     private final UserService userService;
     private final NotificationService notificationService;
+    private final ResourceWatchService resourceWatchService;
     private final ActivityLogService activityLogService;
 
     public BookingServiceImpl(BookingRepository bookingRepository,
                               CampusResourceRepository resourceRepository,
                               UserService userService,
                               NotificationService notificationService,
+                              ResourceWatchService resourceWatchService,
                               ActivityLogService activityLogService) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
         this.userService = userService;
         this.notificationService = notificationService;
+        this.resourceWatchService = resourceWatchService;
         this.activityLogService = activityLogService;
     }
 
@@ -146,6 +150,7 @@ public class BookingServiceImpl implements BookingService {
                 "BOOKING_REJECTED",
                 "Your booking for " + booking.getResource().getName() + " has been rejected.",
                 "BOOKING", booking.getId());
+        resourceWatchService.notifyWatchersResourceAvailable(saved);
 
         return toResponse(saved);
     }
@@ -164,6 +169,7 @@ public class BookingServiceImpl implements BookingService {
         }
         Booking saved = bookingRepository.save(booking);
         activityLogService.log(userId, booking.getUser().getName(), "BOOKING_CANCELLED", "BOOKING", saved.getId(), "Cancelled booking for " + booking.getResource().getName());
+        resourceWatchService.notifyWatchersResourceAvailable(saved);
         return toResponse(saved);
     }
 

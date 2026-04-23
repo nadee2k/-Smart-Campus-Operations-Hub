@@ -25,6 +25,8 @@ import {
   ChevronUp,
   FileText,
   Download,
+  Bell,
+  BellRing,
 } from 'lucide-react';
 
 function formatTime(val) {
@@ -71,7 +73,7 @@ function getMaintenanceTone(score = 100) {
 export default function ResourceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin, isTechnician } = useAuth();
+  const { user, isAdmin, isTechnician } = useAuth();
   const [resource, setResource] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -80,6 +82,9 @@ export default function ResourceDetailPage() {
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [reportLoading, setReportLoading] = useState(true);
   const [reportDownloading, setReportDownloading] = useState(false);
+  const [watchStatus, setWatchStatus] = useState(null);
+  const [watchLoading, setWatchLoading] = useState(true);
+  const [watchSaving, setWatchSaving] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -100,6 +105,13 @@ export default function ResourceDetailPage() {
       .then((res) => setWeeklyReport(res.data))
       .catch(() => setWeeklyReport(null))
       .finally(() => setReportLoading(false));
+
+    setWatchLoading(true);
+    resourceService
+      .getWatchStatus(id)
+      .then((res) => setWatchStatus(res.data))
+      .catch(() => setWatchStatus(null))
+      .finally(() => setWatchLoading(false));
   }, [id]);
 
   const handleDelete = () => {
@@ -130,6 +142,29 @@ export default function ResourceDetailPage() {
       toast.error('Unable to download weekly report right now');
     } finally {
       setReportDownloading(false);
+    }
+  };
+
+  const handleToggleWatch = async () => {
+    try {
+      setWatchSaving(true);
+      if (watchStatus?.watching) {
+        await resourceService.unwatch(id);
+        setWatchStatus((current) => current ? {
+          ...current,
+          watching: false,
+          watcherCount: Math.max(0, (current.watcherCount ?? 1) - 1),
+        } : current);
+        toast.success('Resource removed from your watchlist');
+      } else {
+        const res = await resourceService.watch(id);
+        setWatchStatus(res.data);
+        toast.success('You will be notified when this resource opens up');
+      }
+    } catch {
+      toast.error('Unable to update watchlist right now');
+    } finally {
+      setWatchSaving(false);
     }
   };
 
@@ -173,6 +208,20 @@ export default function ResourceDetailPage() {
           Back to Resources
         </Link>
         <div className="flex flex-wrap gap-2">
+          {!isTechnician && user && (
+            <button
+              onClick={handleToggleWatch}
+              disabled={watchLoading || watchSaving}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                watchStatus?.watching
+                  ? 'border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20'
+                  : 'border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+              }`}
+            >
+              {watchStatus?.watching ? <BellRing className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+              {watchSaving ? 'Saving...' : watchStatus?.watching ? 'Watching resource' : 'Watch resource'}
+            </button>
+          )}
           <Link
             to={`/bookings/calendar?resourceId=${resource.id}`}
             className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -212,7 +261,16 @@ export default function ResourceDetailPage() {
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
         <div className="flex items-start justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{resource.name}</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{resource.name}</h1>
+            {!isTechnician && (
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                {watchLoading
+                  ? 'Loading watchlist status...'
+                  : `${watchStatus?.watcherCount ?? 0} user${watchStatus?.watcherCount === 1 ? '' : 's'} watching for the next open slot`}
+              </p>
+            )}
+          </div>
           <StatusBadge status={resource.status} />
         </div>
 
