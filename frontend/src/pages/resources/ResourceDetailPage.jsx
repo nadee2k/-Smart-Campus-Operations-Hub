@@ -28,6 +28,7 @@ import {
   Bell,
   BellRing,
   Power,
+  Sparkles,
 } from 'lucide-react';
 
 function formatTime(val) {
@@ -247,6 +248,13 @@ export default function ResourceDetailPage() {
           >
             <Calendar className="h-4 w-4" />
             View availability
+          </Link>
+          <Link
+            to={`/assistant/resource?resourceId=${resource.id}`}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-amber-200 dark:border-amber-700 rounded-full text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+          >
+            <Sparkles className="h-4 w-4" />
+            Ask AI
           </Link>
           {!isTechnician && (
             <Link

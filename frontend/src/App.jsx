@@ -26,6 +26,7 @@ import TicketDetailPage from './pages/tickets/TicketDetailPage';
 import NotificationPage from './pages/notifications/NotificationPage';
 import ProfilePage from './pages/profile/ProfilePage';
 import AnalyticsDashboardPage from './pages/analytics/AnalyticsDashboardPage';
+import ResourceAssistantPage from './pages/assistant/ResourceAssistantPage';
 
 import UserManagementPage from './pages/admin/UserManagementPage';
 import ActivityFeedPage from './pages/admin/ActivityFeedPage';
@@ -69,6 +70,9 @@ export default function App() {
 
               {/* Notifications */}
               <Route path="/notifications" element={<NotificationPage />} />
+
+              {/* AI Assistant */}
+              <Route path="/assistant/resource" element={<ProtectedRoute roles={['USER', 'ADMIN', 'TECHNICIAN']}><ResourceAssistantPage /></ProtectedRoute>} />
 
               {/* Profile */}
               <Route path="/profile" element={<ProfilePage />} />
