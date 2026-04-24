@@ -3,6 +3,9 @@ import api from './api';
 export const resourceService = {
   getAll: (params) => api.get('/resources', { params }),
   getById: (id) => api.get(`/resources/${id}`),
+  getBlackouts: (id) => api.get(`/resources/${id}/blackouts`),
+  createBlackout: (id, data) => api.post(`/resources/${id}/blackouts`, data),
+  deleteBlackout: (id, blackoutId) => api.delete(`/resources/${id}/blackouts/${blackoutId}`),
   getMyWatchlist: () => api.get('/resources/watchlist/my'),
   getWatchStatus: (id) => api.get(`/resources/${id}/watch-status`),
   watch: (id) => api.post(`/resources/${id}/watch`),

@@ -4,14 +4,19 @@ import com.smartcampus.activity.service.ActivityLogService;
 import com.smartcampus.booking.entity.Booking;
 import com.smartcampus.booking.entity.BookingStatus;
 import com.smartcampus.booking.repository.BookingRepository;
+import com.smartcampus.common.exception.ConflictException;
 import com.smartcampus.common.exception.ResourceNotFoundException;
+import com.smartcampus.resource.dto.ResourceBlackoutRequest;
+import com.smartcampus.resource.dto.ResourceBlackoutResponse;
 import com.smartcampus.resource.dto.ResourceRequest;
 import com.smartcampus.resource.dto.ResourceResponse;
 import com.smartcampus.resource.dto.WeeklyResourceReportResponse;
 import com.smartcampus.resource.entity.CampusResource;
+import com.smartcampus.resource.entity.ResourceBlackout;
 import com.smartcampus.resource.entity.ResourceStatus;
 import com.smartcampus.resource.entity.ResourceType;
 import com.smartcampus.resource.repository.CampusResourceRepository;
+import com.smartcampus.resource.repository.ResourceBlackoutRepository;
 import com.smartcampus.ticket.repository.TicketRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +50,9 @@ class CampusResourceServiceTest {
     private BookingRepository bookingRepository;
 
     @Mock
+    private ResourceBlackoutRepository blackoutRepository;
+
+    @Mock
     private TicketRepository ticketRepository;
 
     @Mock
@@ -58,6 +66,7 @@ class CampusResourceServiceTest {
 
     private CampusResource resource;
     private ResourceRequest request;
+    private ResourceBlackoutRequest blackoutRequest;
 
     @BeforeEach
     void setUp() {
@@ -81,6 +90,12 @@ class CampusResourceServiceTest {
         request.setCapacity(200);
         request.setLocation("Building A");
         request.setDescription("Large lecture hall for academic sessions.");
+
+        blackoutRequest = new ResourceBlackoutRequest();
+        blackoutRequest.setTitle("Maintenance");
+        blackoutRequest.setReason("Projector replacement");
+        blackoutRequest.setStartTime(LocalDateTime.of(2026, 4, 26, 9, 0));
+        blackoutRequest.setEndTime(LocalDateTime.of(2026, 4, 26, 12, 0));
     }
 
     @Test
@@ -206,6 +221,47 @@ class CampusResourceServiceTest {
 
         ResourceResponse secondResult = service.toggleStatus(1L);
         assertThat(secondResult.status()).isEqualTo(ResourceStatus.ACTIVE);
+    }
+
+    @Test
+    void createBlackout_shouldPersistAndReturnBlackout() {
+        when(repository.findById(1L)).thenReturn(Optional.of(resource));
+        when(blackoutRepository.findOverlapping(eq(1L), any(), any())).thenReturn(List.of());
+        when(bookingRepository.findConflicting(eq(1L), any(), any())).thenReturn(List.of());
+        when(blackoutRepository.save(any(ResourceBlackout.class))).thenAnswer(invocation -> {
+            ResourceBlackout blackout = invocation.getArgument(0);
+            blackout.setId(5L);
+            blackout.setCreatedAt(LocalDateTime.of(2026, 4, 24, 10, 0));
+            return blackout;
+        });
+
+        ResourceBlackoutResponse result = service.createBlackout(1L, blackoutRequest);
+
+        assertThat(result.id()).isEqualTo(5L);
+        assertThat(result.title()).isEqualTo("Maintenance");
+        assertThat(result.reason()).isEqualTo("Projector replacement");
+        verify(activityLogService).log(
+                isNull(),
+                eq("Admin"),
+                eq("RESOURCE_BLACKOUT_CREATED"),
+                eq("RESOURCE"),
+                eq(1L),
+                contains("Blocked Main Hall")
+        );
+    }
+
+    @Test
+    void createBlackout_shouldThrowWhenOverlappingBookingExists() {
+        Booking conflictingBooking = new Booking();
+        conflictingBooking.setId(8L);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(resource));
+        when(blackoutRepository.findOverlapping(eq(1L), any(), any())).thenReturn(List.of());
+        when(bookingRepository.findConflicting(eq(1L), any(), any())).thenReturn(List.of(conflictingBooking));
+
+        assertThatThrownBy(() -> service.createBlackout(1L, blackoutRequest))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("existing booking");
     }
 
     @Test

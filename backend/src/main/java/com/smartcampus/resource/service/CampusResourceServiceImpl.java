@@ -14,14 +14,20 @@ import com.smartcampus.activity.service.ActivityLogService;
 import com.smartcampus.booking.entity.Booking;
 import com.smartcampus.booking.entity.BookingStatus;
 import com.smartcampus.booking.repository.BookingRepository;
+import com.smartcampus.common.exception.BadRequestException;
+import com.smartcampus.common.exception.ConflictException;
 import com.smartcampus.common.exception.ResourceNotFoundException;
+import com.smartcampus.resource.dto.ResourceBlackoutRequest;
+import com.smartcampus.resource.dto.ResourceBlackoutResponse;
 import com.smartcampus.resource.dto.ResourceRequest;
 import com.smartcampus.resource.dto.ResourceResponse;
 import com.smartcampus.resource.dto.WeeklyResourceReportResponse;
 import com.smartcampus.resource.entity.CampusResource;
+import com.smartcampus.resource.entity.ResourceBlackout;
 import com.smartcampus.resource.entity.ResourceStatus;
 import com.smartcampus.resource.entity.ResourceType;
 import com.smartcampus.resource.repository.CampusResourceRepository;
+import com.smartcampus.resource.repository.ResourceBlackoutRepository;
 import com.smartcampus.ticket.entity.Ticket;
 import com.smartcampus.ticket.entity.TicketStatus;
 import com.smartcampus.ticket.repository.TicketRepository;
@@ -48,17 +54,20 @@ public class CampusResourceServiceImpl implements CampusResourceService {
 
     private final CampusResourceRepository repository;
     private final BookingRepository bookingRepository;
+    private final ResourceBlackoutRepository blackoutRepository;
     private final TicketRepository ticketRepository;
     private final ModelMapper modelMapper;
     private final ActivityLogService activityLogService;
 
     public CampusResourceServiceImpl(CampusResourceRepository repository,
                                      BookingRepository bookingRepository,
+                                     ResourceBlackoutRepository blackoutRepository,
                                      TicketRepository ticketRepository,
                                      ModelMapper modelMapper,
                                      ActivityLogService activityLogService) {
         this.repository = repository;
         this.bookingRepository = bookingRepository;
+        this.blackoutRepository = blackoutRepository;
         this.ticketRepository = ticketRepository;
         this.modelMapper = modelMapper;
         this.activityLogService = activityLogService;
@@ -85,6 +94,78 @@ public class CampusResourceServiceImpl implements CampusResourceService {
     public ResourceResponse getById(Long id) {
         CampusResource resource = findActiveById(id);
         return toResponse(resource);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResourceBlackoutResponse> getBlackouts(Long id) {
+        CampusResource resource = findActiveById(id);
+        return blackoutRepository.findByResourceIdOrderByStartTimeAsc(resource.getId())
+                .stream()
+                .map(this::toBlackoutResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "resources", allEntries = true)
+    public ResourceBlackoutResponse createBlackout(Long id, ResourceBlackoutRequest request) {
+        CampusResource resource = findActiveById(id);
+        validateBlackoutWindow(request.getStartTime(), request.getEndTime());
+
+        List<ResourceBlackout> overlappingBlackouts = blackoutRepository.findOverlapping(
+                resource.getId(),
+                request.getStartTime(),
+                request.getEndTime()
+        );
+        if (!overlappingBlackouts.isEmpty()) {
+            throw new ConflictException("Blackout period overlaps an existing blackout");
+        }
+
+        List<Booking> activeBookings = bookingRepository.findConflicting(
+                resource.getId(),
+                request.getStartTime(),
+                request.getEndTime()
+        );
+        if (!activeBookings.isEmpty()) {
+            throw new ConflictException("Blackout period overlaps an existing booking");
+        }
+
+        ResourceBlackout blackout = new ResourceBlackout();
+        blackout.setResource(resource);
+        blackout.setTitle(request.getTitle().trim());
+        blackout.setReason(request.getReason());
+        blackout.setStartTime(request.getStartTime());
+        blackout.setEndTime(request.getEndTime());
+
+        ResourceBlackout saved = blackoutRepository.save(blackout);
+        activityLogService.log(
+                null,
+                "Admin",
+                "RESOURCE_BLACKOUT_CREATED",
+                "RESOURCE",
+                resource.getId(),
+                "Blocked " + resource.getName() + " from " + request.getStartTime() + " to " + request.getEndTime()
+        );
+        return toBlackoutResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "resources", allEntries = true)
+    public void deleteBlackout(Long id, Long blackoutId) {
+        CampusResource resource = findActiveById(id);
+        ResourceBlackout blackout = blackoutRepository.findByIdAndResourceId(blackoutId, resource.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Resource blackout", blackoutId));
+        blackoutRepository.delete(blackout);
+        activityLogService.log(
+                null,
+                "Admin",
+                "RESOURCE_BLACKOUT_DELETED",
+                "RESOURCE",
+                resource.getId(),
+                "Removed blackout \"" + blackout.getTitle() + "\" from " + resource.getName()
+        );
     }
 
     @Override
@@ -436,6 +517,28 @@ public class CampusResourceServiceImpl implements CampusResourceService {
                 ticketsResolved,
                 openTickets
         );
+    }
+
+    private ResourceBlackoutResponse toBlackoutResponse(ResourceBlackout blackout) {
+        return new ResourceBlackoutResponse(
+                blackout.getId(),
+                blackout.getResource().getId(),
+                blackout.getResource().getName(),
+                blackout.getTitle(),
+                blackout.getReason(),
+                blackout.getStartTime(),
+                blackout.getEndTime(),
+                blackout.getCreatedAt()
+        );
+    }
+
+    private void validateBlackoutWindow(java.time.LocalDateTime startTime, java.time.LocalDateTime endTime) {
+        if (startTime == null || endTime == null) {
+            throw new BadRequestException("Blackout start and end times are required");
+        }
+        if (!endTime.isAfter(startTime)) {
+            throw new BadRequestException("Blackout end time must be after start time");
+        }
     }
 
     private void addTableRow(PdfPTable table, String label, Object value, Font font) {

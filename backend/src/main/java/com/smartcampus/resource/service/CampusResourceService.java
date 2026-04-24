@@ -1,6 +1,8 @@
 package com.smartcampus.resource.service;
 
 import com.smartcampus.resource.dto.ResourceRequest;
+import com.smartcampus.resource.dto.ResourceBlackoutRequest;
+import com.smartcampus.resource.dto.ResourceBlackoutResponse;
 import com.smartcampus.resource.dto.ResourceResponse;
 import com.smartcampus.resource.dto.WeeklyResourceReportResponse;
 import com.smartcampus.resource.entity.ResourceStatus;
@@ -8,11 +10,19 @@ import com.smartcampus.resource.entity.ResourceType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
+
 public interface CampusResourceService {
 
     ResourceResponse create(ResourceRequest request);
 
     ResourceResponse getById(Long id);
+
+    List<ResourceBlackoutResponse> getBlackouts(Long id);
+
+    ResourceBlackoutResponse createBlackout(Long id, ResourceBlackoutRequest request);
+
+    void deleteBlackout(Long id, Long blackoutId);
 
     WeeklyResourceReportResponse getWeeklyReport(Long id);
 

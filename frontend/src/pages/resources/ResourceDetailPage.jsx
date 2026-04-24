@@ -29,6 +29,8 @@ import {
   BellRing,
   Power,
   Sparkles,
+  Ban,
+  Plus,
 } from 'lucide-react';
 
 function formatTime(val) {
@@ -88,6 +90,16 @@ export default function ResourceDetailPage() {
   const [watchLoading, setWatchLoading] = useState(true);
   const [watchSaving, setWatchSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [blackouts, setBlackouts] = useState([]);
+  const [blackoutsLoading, setBlackoutsLoading] = useState(true);
+  const [blackoutSaving, setBlackoutSaving] = useState(false);
+  const [removingBlackoutId, setRemovingBlackoutId] = useState(null);
+  const [blackoutForm, setBlackoutForm] = useState({
+    title: '',
+    reason: '',
+    startTime: '',
+    endTime: '',
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -115,6 +127,13 @@ export default function ResourceDetailPage() {
       .then((res) => setWatchStatus(res.data))
       .catch(() => setWatchStatus(null))
       .finally(() => setWatchLoading(false));
+
+    setBlackoutsLoading(true);
+    resourceService
+      .getBlackouts(id)
+      .then((res) => setBlackouts(res.data ?? []))
+      .catch(() => setBlackouts([]))
+      .finally(() => setBlackoutsLoading(false));
   }, [id]);
 
   const handleDelete = () => {
@@ -185,6 +204,53 @@ export default function ResourceDetailPage() {
       toast.error('Unable to update resource status right now');
     } finally {
       setStatusSaving(false);
+    }
+  };
+
+  const handleBlackoutInputChange = (key, value) => {
+    setBlackoutForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleCreateBlackout = async (event) => {
+    event.preventDefault();
+    try {
+      setBlackoutSaving(true);
+      const payload = {
+        title: blackoutForm.title.trim(),
+        reason: blackoutForm.reason.trim() || null,
+        startTime: blackoutForm.startTime ? `${blackoutForm.startTime}:00` : null,
+        endTime: blackoutForm.endTime ? `${blackoutForm.endTime}:00` : null,
+      };
+      const res = await resourceService.createBlackout(id, payload);
+      setBlackouts((current) => {
+        const next = [...current, res.data];
+        next.sort((left, right) => new Date(left.startTime) - new Date(right.startTime));
+        return next;
+      });
+      setBlackoutForm({
+        title: '',
+        reason: '',
+        startTime: '',
+        endTime: '',
+      });
+      toast.success('Blackout period added');
+    } catch {
+      // Toast handled by API interceptor.
+    } finally {
+      setBlackoutSaving(false);
+    }
+  };
+
+  const handleDeleteBlackout = async (blackoutId) => {
+    try {
+      setRemovingBlackoutId(blackoutId);
+      await resourceService.deleteBlackout(id, blackoutId);
+      setBlackouts((current) => current.filter((blackout) => blackout.id !== blackoutId));
+      toast.success('Blackout period removed');
+    } catch {
+      // Toast handled by API interceptor.
+    } finally {
+      setRemovingBlackoutId(null);
     }
   };
 
@@ -477,6 +543,140 @@ export default function ResourceDetailPage() {
               </a>
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-rose-100 dark:bg-rose-500/10">
+            <Ban className="h-5 w-5 text-rose-700 dark:text-rose-300" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Resource Blackout Dates</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Block out maintenance windows, holidays, and special events so the resource cannot be booked during those periods.
+            </p>
+          </div>
+        </div>
+
+        {isAdmin && (
+          <form onSubmit={handleCreateBlackout} className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Blackout title
+              </label>
+              <input
+                type="text"
+                value={blackoutForm.title}
+                onChange={(e) => handleBlackoutInputChange('title', e.target.value)}
+                placeholder="Maintenance, public holiday, exam event..."
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Start time
+              </label>
+              <input
+                type="datetime-local"
+                value={blackoutForm.startTime}
+                onChange={(e) => handleBlackoutInputChange('startTime', e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                End time
+              </label>
+              <input
+                type="datetime-local"
+                value={blackoutForm.endTime}
+                onChange={(e) => handleBlackoutInputChange('endTime', e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Notes
+              </label>
+              <textarea
+                rows={3}
+                value={blackoutForm.reason}
+                onChange={(e) => handleBlackoutInputChange('reason', e.target.value)}
+                placeholder="Optional note for admins and users."
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <button
+                type="submit"
+                disabled={blackoutSaving}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                {blackoutSaving ? 'Saving blackout...' : 'Add blackout period'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className="mt-5 space-y-3">
+          {blackoutsLoading ? (
+            <LoadingSpinner />
+          ) : blackouts.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              No blackout periods have been scheduled for this resource.
+            </p>
+          ) : (
+            blackouts.map((blackout) => {
+              const isPast = new Date(blackout.endTime) < new Date();
+              return (
+                <div
+                  key={blackout.id}
+                  className={`rounded-2xl border p-4 ${
+                    isPast
+                      ? 'border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40'
+                      : 'border-rose-200 dark:border-rose-900/70 bg-rose-50/70 dark:bg-rose-950/20'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-gray-900 dark:text-white">{blackout.title}</p>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                            isPast
+                              ? 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                              : 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'
+                          }`}
+                        >
+                          {isPast ? 'Past blackout' : 'Blocked'}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        {formatDateTime(blackout.startTime)} - {formatDateTime(blackout.endTime)}
+                      </p>
+                      {blackout.reason && (
+                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 whitespace-pre-wrap">
+                          {blackout.reason}
+                        </p>
+                      )}
+                    </div>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDeleteBlackout(blackout.id)}
+                        disabled={removingBlackoutId === blackout.id}
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-full border border-red-200 dark:border-red-800 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {removingBlackoutId === blackout.id ? 'Removing...' : 'Remove'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

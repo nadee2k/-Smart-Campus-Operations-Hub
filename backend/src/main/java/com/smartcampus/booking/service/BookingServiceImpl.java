@@ -13,7 +13,9 @@ import com.smartcampus.common.exception.ConflictException;
 import com.smartcampus.common.exception.ResourceNotFoundException;
 import com.smartcampus.notification.service.NotificationService;
 import com.smartcampus.resource.entity.CampusResource;
+import com.smartcampus.resource.entity.ResourceBlackout;
 import com.smartcampus.resource.repository.CampusResourceRepository;
+import com.smartcampus.resource.repository.ResourceBlackoutRepository;
 import com.smartcampus.resource.service.ResourceWatchService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +33,7 @@ public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final CampusResourceRepository resourceRepository;
+    private final ResourceBlackoutRepository blackoutRepository;
     private final UserService userService;
     private final NotificationService notificationService;
     private final ResourceWatchService resourceWatchService;
@@ -38,12 +41,14 @@ public class BookingServiceImpl implements BookingService {
 
     public BookingServiceImpl(BookingRepository bookingRepository,
                               CampusResourceRepository resourceRepository,
+                              ResourceBlackoutRepository blackoutRepository,
                               UserService userService,
                               NotificationService notificationService,
                               ResourceWatchService resourceWatchService,
                               ActivityLogService activityLogService) {
         this.bookingRepository = bookingRepository;
         this.resourceRepository = resourceRepository;
+        this.blackoutRepository = blackoutRepository;
         this.userService = userService;
         this.notificationService = notificationService;
         this.resourceWatchService = resourceWatchService;
@@ -69,6 +74,15 @@ public class BookingServiceImpl implements BookingService {
                 resource.getId(), request.getStartTime(), request.getEndTime());
         if (!conflicts.isEmpty()) {
             throw new ConflictException("Time slot conflicts with an existing booking");
+        }
+
+        List<ResourceBlackout> blackoutConflicts = blackoutRepository.findOverlapping(
+                resource.getId(),
+                request.getStartTime(),
+                request.getEndTime()
+        );
+        if (!blackoutConflicts.isEmpty()) {
+            throw new ConflictException("Time slot falls within a blocked blackout period");
         }
 
         User user = userService.findById(userId);
@@ -206,40 +220,48 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getSuggestions(Long resourceId, java.time.LocalDate date, int durationMinutes) {
         List<Map<String, Object>> allSlots = new ArrayList<>();
+
+        CampusResource resource = resourceRepository.findById(resourceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Resource", resourceId));
+        if (resource.getDeleted()) {
+            throw new ResourceNotFoundException("Resource", resourceId);
+        }
         
         // Collect all available slots across next 3 days
         for (int dayOffset = 0; dayOffset < 3; dayOffset++) {
             java.time.LocalDate checkDate = date.plusDays(dayOffset);
-            LocalDateTime dayStart = checkDate.atTime(8, 0);
-            LocalDateTime dayEnd = checkDate.atTime(22, 0);
+            LocalDateTime dayStart = checkDate.atTime(resource.getAvailabilityStartTime());
+            LocalDateTime dayEnd = checkDate.atTime(resource.getAvailabilityEndTime());
 
-            List<Booking> existing = bookingRepository.findByResourceIdAndStartTimeBetween(
-                    resourceId, dayStart, dayEnd);
-            existing.sort((a, b) -> a.getStartTime().compareTo(b.getStartTime()));
+            List<Booking> existing = bookingRepository.findConflicting(resourceId, dayStart, dayEnd);
+            List<ResourceBlackout> blackouts = blackoutRepository.findOverlapping(resourceId, dayStart, dayEnd);
 
-            LocalDateTime slotStart = dayStart;
-            for (Booking b : existing) {
-                if (b.getStatus() == BookingStatus.CANCELLED || b.getStatus() == BookingStatus.REJECTED) continue;
-                LocalDateTime slotEnd = slotStart.plusMinutes(durationMinutes);
-                if (!slotEnd.isAfter(b.getStartTime()) && !slotEnd.isAfter(dayEnd)) {
-                    Map<String, Object> slot = new HashMap<>();
-                    slot.put("start", slotStart);
-                    slot.put("end", slotEnd);
-                    slot.put("date", checkDate);
-                    allSlots.add(slot);
+            List<TimeWindow> blockedWindows = new ArrayList<>();
+            for (Booking booking : existing) {
+                if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.REJECTED) {
+                    continue;
                 }
-                slotStart = b.getEndTime();
+                blockedWindows.add(new TimeWindow(booking.getStartTime(), booking.getEndTime()));
             }
-            if (allSlots.size() < 15) { // Collect more slots for ranking
-                LocalDateTime slotEnd = slotStart.plusMinutes(durationMinutes);
-                if (!slotEnd.isAfter(dayEnd)) {
-                    Map<String, Object> slot = new HashMap<>();
-                    slot.put("start", slotStart);
-                    slot.put("end", slotEnd);
-                    slot.put("date", checkDate);
-                    allSlots.add(slot);
+            for (ResourceBlackout blackout : blackouts) {
+                blockedWindows.add(new TimeWindow(
+                        maxDateTime(dayStart, blackout.getStartTime()),
+                        minDateTime(dayEnd, blackout.getEndTime())
+                ));
+            }
+
+            blockedWindows.sort((left, right) -> left.start().compareTo(right.start()));
+
+            LocalDateTime slotCursor = dayStart;
+            for (TimeWindow blockedWindow : blockedWindows) {
+                if (blockedWindow.start().isAfter(slotCursor)) {
+                    addSlotIfAvailable(allSlots, slotCursor, blockedWindow.start(), dayEnd, durationMinutes, checkDate);
+                }
+                if (blockedWindow.end().isAfter(slotCursor)) {
+                    slotCursor = blockedWindow.end();
                 }
             }
+            addSlotIfAvailable(allSlots, slotCursor, dayEnd, dayEnd, durationMinutes, checkDate);
         }
         
         // Calculate historical patterns for scoring
@@ -424,6 +446,32 @@ public class BookingServiceImpl implements BookingService {
             default -> "Unknown";
         };
     }
+
+    private void addSlotIfAvailable(List<Map<String, Object>> allSlots,
+                                    LocalDateTime windowStart,
+                                    LocalDateTime windowEnd,
+                                    LocalDateTime dayEnd,
+                                    int durationMinutes,
+                                    java.time.LocalDate checkDate) {
+        LocalDateTime slotEnd = windowStart.plusMinutes(durationMinutes);
+        if (!slotEnd.isAfter(windowEnd) && !slotEnd.isAfter(dayEnd)) {
+            Map<String, Object> slot = new HashMap<>();
+            slot.put("start", windowStart);
+            slot.put("end", slotEnd);
+            slot.put("date", checkDate);
+            allSlots.add(slot);
+        }
+    }
+
+    private LocalDateTime maxDateTime(LocalDateTime first, LocalDateTime second) {
+        return first.isAfter(second) ? first : second;
+    }
+
+    private LocalDateTime minDateTime(LocalDateTime first, LocalDateTime second) {
+        return first.isBefore(second) ? first : second;
+    }
+
+    private record TimeWindow(LocalDateTime start, LocalDateTime end) {}
 
     private void validateTransition(Booking booking, BookingStatus target) {
         BookingStatus current = booking.getStatus();

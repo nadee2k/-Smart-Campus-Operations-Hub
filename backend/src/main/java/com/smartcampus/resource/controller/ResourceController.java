@@ -3,6 +3,8 @@ package com.smartcampus.resource.controller;
 import com.smartcampus.common.dto.PageResponse;
 import com.smartcampus.config.security.AuthUtil;
 import com.smartcampus.resource.dto.ResourceRequest;
+import com.smartcampus.resource.dto.ResourceBlackoutRequest;
+import com.smartcampus.resource.dto.ResourceBlackoutResponse;
 import com.smartcampus.resource.dto.ResourceResponse;
 import com.smartcampus.resource.dto.ResourceWatchListItemResponse;
 import com.smartcampus.resource.dto.ResourceWatchStatusResponse;
@@ -45,6 +47,25 @@ public class ResourceController {
     @GetMapping("/{id}")
     public ResponseEntity<ResourceResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(resourceService.getById(id));
+    }
+
+    @GetMapping("/{id}/blackouts")
+    public ResponseEntity<List<ResourceBlackoutResponse>> getBlackouts(@PathVariable Long id) {
+        return ResponseEntity.ok(resourceService.getBlackouts(id));
+    }
+
+    @PostMapping("/{id}/blackouts")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResourceBlackoutResponse> createBlackout(@PathVariable Long id,
+                                                                   @Valid @RequestBody ResourceBlackoutRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(resourceService.createBlackout(id, request));
+    }
+
+    @DeleteMapping("/{id}/blackouts/{blackoutId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteBlackout(@PathVariable Long id, @PathVariable Long blackoutId) {
+        resourceService.deleteBlackout(id, blackoutId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/watchlist/my")
