@@ -7,6 +7,7 @@ import com.smartcampus.auth.service.UserService;
 import com.smartcampus.common.exception.AccessDeniedException;
 import com.smartcampus.common.exception.BadRequestException;
 import com.smartcampus.common.exception.ResourceNotFoundException;
+import com.smartcampus.notification.event.TicketCreatedEmailEvent;
 import com.smartcampus.notification.service.NotificationService;
 import com.smartcampus.resource.entity.CampusResource;
 import com.smartcampus.resource.repository.CampusResourceRepository;
@@ -16,6 +17,7 @@ import com.smartcampus.ticket.repository.TicketAttachmentRepository;
 import com.smartcampus.ticket.repository.TicketCommentRepository;
 import com.smartcampus.ticket.repository.TicketRepository;
 import com.smartcampus.upload.FileStorageService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class TicketServiceImpl implements TicketService {
     private final UserService userService;
     private final FileStorageService fileStorageService;
     private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final ActivityLogService activityLogService;
 
     public TicketServiceImpl(TicketRepository ticketRepository,
@@ -46,6 +49,7 @@ public class TicketServiceImpl implements TicketService {
                              UserService userService,
                              FileStorageService fileStorageService,
                              NotificationService notificationService,
+                             ApplicationEventPublisher eventPublisher,
                              ActivityLogService activityLogService) {
         this.ticketRepository = ticketRepository;
         this.attachmentRepository = attachmentRepository;
@@ -54,6 +58,7 @@ public class TicketServiceImpl implements TicketService {
         this.userService = userService;
         this.fileStorageService = fileStorageService;
         this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
         this.activityLogService = activityLogService;
     }
 
@@ -82,6 +87,16 @@ public class TicketServiceImpl implements TicketService {
 
         Ticket saved = ticketRepository.save(ticket);
         activityLogService.log(userId, user.getName(), "TICKET_CREATED", "TICKET", saved.getId(), "Created ticket: " + request.getCategory());
+        eventPublisher.publishEvent(new TicketCreatedEmailEvent(
+                saved.getId(),
+                formatTicketNumber(saved.getId()),
+                user.getName(),
+                user.getEmail(),
+                saved.getCategory(),
+                saved.getPriority().name(),
+                resource.getName(),
+                saved.getDescription()
+        ));
         return toResponse(saved);
     }
 
