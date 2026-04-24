@@ -4,9 +4,9 @@ spring:
   application:
     name: smart-campus-hub
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5431}/${DB_NAME:smartcampus}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:smartcampus}
     username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:12345}
+    password: ${DB_PASSWORD:123}
   jpa:
     hibernate:
       ddl-auto: validate
