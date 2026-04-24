@@ -123,7 +123,7 @@ function SuggestionPanel({ suggestions, onPick, loading }) {
     return (
       <div className="rounded-2xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 p-5 flex items-center gap-3">
         <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
-        <p className="text-sm text-amber-700 dark:text-amber-300">Finding available alternatives…</p>
+        <p className="text-sm text-amber-700 dark:text-amber-300">Analyzing patterns and finding the best alternatives…</p>
       </div>
     );
   }
@@ -133,30 +133,164 @@ function SuggestionPanel({ suggestions, onPick, loading }) {
   return (
     <div className="rounded-2xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 p-5 space-y-3">
       <div className="flex items-center gap-2">
-        <AlertTriangle className="h-5 w-5 text-amber-500" />
+        <Sparkles className="h-5 w-5 text-amber-500" />
         <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-          This slot is taken. Here are available alternatives:
+          Smart Time Slot Suggestions
         </p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {suggestions.map((s, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => onPick(s)}
-            className="flex items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-700/50 bg-white dark:bg-gray-900 px-4 py-3 text-left hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md transition-all group"
-          >
-            <Sparkles className="h-4 w-4 text-indigo-400 group-hover:text-indigo-500 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {formatDate(s.startTime)}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {formatTime(s.startTime)} – {formatTime(s.endTime)}
-              </p>
-            </div>
-          </button>
-        ))}
+      <p className="text-xs text-amber-700 dark:text-amber-300 ml-7">
+        Based on historical booking patterns, these times have excellent availability
+      </p>
+      <div className="grid gap-3">
+        {suggestions.map((s, i) => {
+          const st = s.start || s.startTime;
+          const et = s.end || s.endTime;
+          const score = s.score ? Math.round(s.score) : 0;
+          const reasoning = s.reasoning || '';
+
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onPick(s)}
+              className="group relative rounded-xl border border-amber-200 dark:border-amber-700/50 bg-white dark:bg-gray-900 px-4 py-3 text-left hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-lg hover:scale-[1.02] transition-all overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/0 to-indigo-500/0 group-hover:from-indigo-500/5 group-hover:via-indigo-500/5 group-hover:to-indigo-500/5 transition-all" />
+
+              <div className="relative flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                      {formatDate(st)}
+                    </p>
+                    <span className="text-xs font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full">
+                      #{i + 1} Match
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mb-2">
+                    {formatTime(st)} – {formatTime(et)}
+                  </p>
+                  {reasoning && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug">
+                      💡 {reasoning}
+                    </p>
+                  )}
+                </div>
+
+                {score > 0 && (
+                  <div className="flex flex-col items-center gap-1 shrink-0 pt-1">
+                    <div className="relative w-12 h-12 flex items-center justify-center">
+                      <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r="15.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          className="text-gray-200 dark:text-gray-700"
+                        />
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r="15.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeDasharray={`${score * 0.97} 100`}
+                          className={`${
+                            score >= 80
+                              ? 'text-emerald-500'
+                              : score >= 60
+                              ? 'text-amber-500'
+                              : 'text-orange-500'
+                          } transition-all`}
+                        />
+                      </svg>
+                      <span className="absolute text-xs font-bold text-gray-700 dark:text-gray-300">
+                        {score}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MapUnit({ resource, selected, onSelect }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(resource.id)}
+      className={`relative rounded-xl border-2 transition-all p-3 text-left flex flex-col justify-between group overflow-hidden ${
+        selected ? 'border-indigo-500 bg-zinc-100 dark:bg-zinc-800 shadow-[0_0_20px_rgba(99,102,241,0.2)] scale-[1.02] z-20' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80 hover:border-indigo-300 dark:hover:border-indigo-600 hover:scale-[1.02] hover:-translate-y-0.5 shadow-sm hover:z-20'
+      }`}
+    >
+      <div className="flex justify-between items-start mb-2 z-10 gap-2">
+         <div className={`font-bold leading-tight ${selected ? 'text-zinc-700 dark:text-zinc-300' : 'text-gray-800 dark:text-gray-200'}`}>
+            {resource.name}
+         </div>
+         <div className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-300 dark:border-gray-600 group-hover:border-indigo-400'}`}>
+            {selected && <Check className="h-3 w-3" strokeWidth={3} />}
+         </div>
+      </div>
+
+      <div className="z-10 bg-gray-100 dark:bg-gray-900/80 px-2 py-1.5 rounded-lg flex items-center justify-between mt-auto">
+        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{resource.type?.replace(/_/g, ' ') || 'ROOM'}</span>
+        <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1"><Users className="h-3 w-3" /> {resource.capacity}</span>
+      </div>
+
+      {selected && (
+         <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-zinc-300 dark:bg-zinc-700 opacity-10 rounded-full blur-xl"></div>
+      )}
+    </button>
+  );
+}
+
+function FloorPlanSelector({ resources, selectedId, onSelect }) {
+  if (!resources || resources.length === 0) return <div className="p-8 text-center text-gray-500">Loading map...</div>;
+
+  const leftResources = resources.filter((_, i) => i % 2 === 0);
+  const rightResources = resources.filter((_, i) => i % 2 !== 0);
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/20 p-2 overflow-x-auto custom-scrollbar">
+        <div className="min-w-[650px] relative mt-4 mb-2 select-none mx-auto">
+
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-72 h-8 bg-gradient-to-b from-gray-200 dark:from-gray-800 to-transparent rounded-t-xl border-t border-x border-gray-300 dark:border-gray-700 flex items-center justify-center text-xs font-bold uppercase tracking-[0.2em] text-gray-400 z-0">
+             Main Entrance
+          </div>
+
+          <div className="flex gap-4 pt-6">
+             {/* Left Wing */}
+             <div className="flex-1 grid grid-cols-2 gap-3 z-10">
+                {leftResources.map(r => (
+                  <MapUnit key={r.id} resource={r} selected={selectedId == r.id} onSelect={onSelect} />
+                ))}
+             </div>
+
+             {/* Corridor */}
+             <div className="w-16 relative flex flex-col items-center shrink-0">
+                <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 border-l-2 border-dashed border-gray-300 dark:border-gray-700 z-0"></div>
+                <div className="sticky top-1/2 -translate-y-1/2 py-20 text-gray-300 dark:text-gray-700 text-[10px] font-black tracking-[0.4em] uppercase" style={{ writingMode: 'vertical-rl' }}>
+                   CENTRAL CORRIDOR
+                </div>
+             </div>
+
+             {/* Right Wing */}
+             <div className="flex-1 grid grid-cols-2 gap-3 z-10">
+                {rightResources.map(r => (
+                  <MapUnit key={r.id} resource={r} selected={selectedId == r.id} onSelect={onSelect} />
+                ))}
+             </div>
+          </div>
+        </div>
       </div>
     </div>
   );

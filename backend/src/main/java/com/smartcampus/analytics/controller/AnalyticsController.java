@@ -1,9 +1,12 @@
 package com.smartcampus.analytics.controller;
 
 import com.smartcampus.analytics.dto.DashboardStats;
+import com.smartcampus.analytics.dto.DayOfWeekPatternData;
+import com.smartcampus.analytics.dto.HourlyPatternData;
 import com.smartcampus.analytics.dto.MostBookedResource;
 import com.smartcampus.analytics.dto.PeakHourData;
 import com.smartcampus.analytics.service.AnalyticsService;
+import com.smartcampus.analytics.service.BookingPatternsService;
 import com.smartcampus.config.security.AuthUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,9 +20,12 @@ import java.util.Map;
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
+    private final BookingPatternsService bookingPatternsService;
 
-    public AnalyticsController(AnalyticsService analyticsService) {
+    public AnalyticsController(AnalyticsService analyticsService,
+                               BookingPatternsService bookingPatternsService) {
         this.analyticsService = analyticsService;
+        this.bookingPatternsService = bookingPatternsService;
     }
 
     @GetMapping("/dashboard")
@@ -74,5 +80,22 @@ public class AnalyticsController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Map<String, Object>>> getTechnicianLeaderboard() {
         return ResponseEntity.ok(analyticsService.getTechnicianLeaderboard());
+    }
+
+    // New endpoints for smart time slot suggestion patterns
+
+    @GetMapping("/resources/{resourceId}/patterns/hourly")
+    public ResponseEntity<List<HourlyPatternData>> getHourlyPatterns(@PathVariable Long resourceId) {
+        return ResponseEntity.ok(bookingPatternsService.getHourlyPatterns(resourceId));
+    }
+
+    @GetMapping("/resources/{resourceId}/patterns/day-of-week")
+    public ResponseEntity<List<DayOfWeekPatternData>> getDayOfWeekPatterns(@PathVariable Long resourceId) {
+        return ResponseEntity.ok(bookingPatternsService.getDayOfWeekPatterns(resourceId));
+    }
+
+    @GetMapping("/resources/{resourceId}/patterns/statistics")
+    public ResponseEntity<Map<String, Object>> getBookingStatistics(@PathVariable Long resourceId) {
+        return ResponseEntity.ok(bookingPatternsService.getBookingStatistics(resourceId));
     }
 }

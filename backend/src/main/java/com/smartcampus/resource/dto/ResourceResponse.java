@@ -5,6 +5,7 @@ import com.smartcampus.resource.entity.ResourceType;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 public record ResourceResponse(
         Long id,
@@ -12,6 +13,14 @@ public record ResourceResponse(
         ResourceType type,
         Integer capacity,
         String location,
+        String description,
+        List<String> amenities,
+        List<String> photoUrls,
+        String layoutMapUrl,
+        String view360Url,
+        String ownerName,
+        String department,
+        Integer maintenanceScore,
         LocalTime availabilityStartTime,
         LocalTime availabilityEndTime,
         ResourceStatus status,

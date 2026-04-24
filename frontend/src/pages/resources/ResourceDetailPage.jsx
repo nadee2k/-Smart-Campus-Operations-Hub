@@ -1,28 +1,40 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { resourceService } from '../../services/resourceService';
 import { ticketService } from '../../services/ticketService';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import { getResourceHealthScore } from '../../utils/resourceHealth';
 import {
   Building2,
   MapPin,
   Users,
   Clock,
   Calendar,
+  ShieldCheck,
+  Image,
+  Link2,
   Pencil,
   Trash2,
   ArrowLeft,
   Wrench,
   ChevronDown,
   ChevronUp,
+  FileText,
+  Download,
+  Bell,
+  BellRing,
+  Power,
+  Sparkles,
 } from 'lucide-react';
 
 function formatTime(val) {
-  if (!val) return '—';
-  let h, m;
+  if (!val) return '-';
+  let h;
+  let m;
   if (typeof val === 'string') {
     const parts = val.split(':');
     h = parseInt(parts[0], 10);
@@ -31,7 +43,7 @@ function formatTime(val) {
     h = val.hour;
     m = String(val.minute ?? 0).padStart(2, '0');
   } else {
-    return '—';
+    return '-';
   }
   const ampm = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 || 12;
@@ -39,31 +51,70 @@ function formatTime(val) {
 }
 
 function formatDateTime(dateStr) {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   const d = new Date(dateStr);
   return d.toLocaleString();
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function getMaintenanceTone(score = 100) {
+  if (score >= 80) return 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-500/10';
+  if (score >= 50) return 'text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-500/10';
+  return 'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-500/10';
 }
 
 export default function ResourceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin, isTechnician } = useAuth();
+  const { user, isAdmin, isTechnician } = useAuth();
   const [resource, setResource] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [workHistory, setWorkHistory] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [weeklyReport, setWeeklyReport] = useState(null);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [reportDownloading, setReportDownloading] = useState(false);
+  const [watchStatus, setWatchStatus] = useState(null);
+  const [watchLoading, setWatchLoading] = useState(true);
+  const [watchSaving, setWatchSaving] = useState(false);
+  const [statusSaving, setStatusSaving] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     resourceService
       .getById(id)
       .then((res) => setResource(res.data))
       .catch(() => setResource(null))
       .finally(() => setLoading(false));
 
-    ticketService.getResourceHistory(id, { page: 0, size: 5 })
+    ticketService
+      .getResourceHistory(id, { page: 0, size: 5 })
       .then((res) => setWorkHistory(res.data.content ?? []))
       .catch(() => {});
+
+    setReportLoading(true);
+    resourceService
+      .getWeeklyReport(id)
+      .then((res) => setWeeklyReport(res.data))
+      .catch(() => setWeeklyReport(null))
+      .finally(() => setReportLoading(false));
+
+    setWatchLoading(true);
+    resourceService
+      .getWatchStatus(id)
+      .then((res) => setWatchStatus(res.data))
+      .catch(() => setWatchStatus(null))
+      .finally(() => setWatchLoading(false));
   }, [id]);
 
   const handleDelete = () => {
@@ -73,6 +124,68 @@ export default function ResourceDetailPage() {
         navigate('/resources');
       })
       .catch(() => {});
+  };
+
+  const handleDownloadWeeklyReport = async () => {
+    try {
+      setReportDownloading(true);
+      const res = await resourceService.downloadWeeklyReport(id);
+      const filename =
+        res.headers['content-disposition']?.match(/filename="(.+)"/)?.[1] ||
+        `resource-${id}-weekly-report.pdf`;
+      const blobUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch {
+      toast.error('Unable to download weekly report right now');
+    } finally {
+      setReportDownloading(false);
+    }
+  };
+
+  const handleToggleWatch = async () => {
+    try {
+      setWatchSaving(true);
+      if (watchStatus?.watching) {
+        await resourceService.unwatch(id);
+        setWatchStatus((current) => current ? {
+          ...current,
+          watching: false,
+          watcherCount: Math.max(0, (current.watcherCount ?? 1) - 1),
+        } : current);
+        toast.success('Resource removed from your watchlist');
+      } else {
+        const res = await resourceService.watch(id);
+        setWatchStatus(res.data);
+        toast.success('You will be notified when this resource opens up');
+      }
+    } catch {
+      toast.error('Unable to update watchlist right now');
+    } finally {
+      setWatchSaving(false);
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    try {
+      setStatusSaving(true);
+      const res = await resourceService.toggleStatus(id);
+      setResource(res.data);
+      toast.success(
+        res.data.status === 'ACTIVE'
+          ? 'Resource marked active'
+          : 'Resource marked out of service'
+      );
+    } catch {
+      toast.error('Unable to update resource status right now');
+    } finally {
+      setStatusSaving(false);
+    }
   };
 
   if (loading) {
@@ -98,8 +211,11 @@ export default function ResourceDetailPage() {
   const availabilityEnd = resource.availabilityEndTime;
   const availabilityStr =
     availabilityStart && availabilityEnd
-      ? `${formatTime(typeof availabilityStart === 'string' ? availabilityStart : availabilityStart)} – ${formatTime(typeof availabilityEnd === 'string' ? availabilityEnd : availabilityEnd)}`
-      : '—';
+      ? `${formatTime(availabilityStart)} - ${formatTime(availabilityEnd)}`
+      : '-';
+  const amenities = resource.amenities || [];
+  const photoUrls = resource.photoUrls || [];
+  const maintenanceScore = getResourceHealthScore(resource);
 
   return (
     <div>
@@ -112,6 +228,34 @@ export default function ResourceDetailPage() {
           Back to Resources
         </Link>
         <div className="flex flex-wrap gap-2">
+          {!isTechnician && user && (
+            <button
+              onClick={handleToggleWatch}
+              disabled={watchLoading || watchSaving}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                watchStatus?.watching
+                  ? 'border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20'
+                  : 'border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+              }`}
+            >
+              {watchStatus?.watching ? <BellRing className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+              {watchSaving ? 'Saving...' : watchStatus?.watching ? 'Watching resource' : 'Watch resource'}
+            </button>
+          )}
+          <Link
+            to={`/bookings/calendar?resourceId=${resource.id}`}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <Calendar className="h-4 w-4" />
+            View availability
+          </Link>
+          <Link
+            to={`/assistant/resource?resourceId=${resource.id}`}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-amber-200 dark:border-amber-700 rounded-full text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+          >
+            <Sparkles className="h-4 w-4" />
+            Ask AI
+          </Link>
           {!isTechnician && (
             <Link
               to={`/bookings/create?resourceId=${resource.id}`}
@@ -123,6 +267,22 @@ export default function ResourceDetailPage() {
           )}
           {isAdmin && (
             <>
+              <button
+                onClick={handleToggleStatus}
+                disabled={statusSaving}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  resource.status === 'ACTIVE'
+                    ? 'border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20'
+                    : 'border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
+                }`}
+              >
+                <Power className="h-4 w-4" />
+                {statusSaving
+                  ? 'Updating...'
+                  : resource.status === 'ACTIVE'
+                    ? 'Mark Out of Service'
+                    : 'Mark Active'}
+              </button>
               <Link
                 to={`/resources/${resource.id}/edit`}
                 className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -144,7 +304,16 @@ export default function ResourceDetailPage() {
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
         <div className="flex items-start justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{resource.name}</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{resource.name}</h1>
+            {!isTechnician && (
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                {watchLoading
+                  ? 'Loading watchlist status...'
+                  : `${watchStatus?.watcherCount ?? 0} user${watchStatus?.watcherCount === 1 ? '' : 's'} watching for the next open slot`}
+              </p>
+            )}
+          </div>
           <StatusBadge status={resource.status} />
         </div>
 
@@ -156,7 +325,7 @@ export default function ResourceDetailPage() {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Type</p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {resource.type?.replace(/_/g, ' ') || '—'}
+                {resource.type?.replace(/_/g, ' ') || '-'}
               </p>
             </div>
           </div>
@@ -177,8 +346,18 @@ export default function ResourceDetailPage() {
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Location</p>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {resource.location || '—'}
+              <p className="font-medium text-gray-900 dark:text-white">{resource.location || '-'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 sm:col-span-2">
+            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 shrink-0">
+              <FileText className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Description</p>
+              <p className="font-medium text-gray-900 dark:text-white whitespace-pre-wrap">
+                {resource.description || '-'}
               </p>
             </div>
           </div>
@@ -195,12 +374,24 @@ export default function ResourceDetailPage() {
 
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 shrink-0">
-              <Clock className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+              <ShieldCheck className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Created</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Health Indicator</p>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getMaintenanceTone(maintenanceScore)}`}>
+                {maintenanceScore}/100
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 shrink-0">
+              <Building2 className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Owner / Department</p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {formatDateTime(resource.createdAt)}
+                {resource.ownerName || '-'} {resource.department ? `• ${resource.department}` : ''}
               </p>
             </div>
           </div>
@@ -210,16 +401,161 @@ export default function ResourceDetailPage() {
               <Clock className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Updated</p>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {formatDateTime(resource.updatedAt)}
-              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Created</p>
+              <p className="font-medium text-gray-900 dark:text-white">{formatDateTime(resource.createdAt)}</p>
             </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 shrink-0">
+              <Clock className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Updated</p>
+              <p className="font-medium text-gray-900 dark:text-white">{formatDateTime(resource.updatedAt)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Amenities / Tags</p>
+          {amenities.length ? (
+            <div className="flex flex-wrap gap-2">
+              {amenities.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">No amenities set</p>
+          )}
+        </div>
+
+        <div className="mt-6 space-y-3">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Media Gallery</p>
+          {photoUrls.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {photoUrls.map((url, index) => (
+                <a key={`${url}-${index}`} href={url} target="_blank" rel="noreferrer" className="group block">
+                  <img
+                    src={url}
+                    alt={`Resource media ${index + 1}`}
+                    className="h-28 w-full object-cover rounded-xl border border-gray-200 dark:border-gray-800 group-hover:opacity-90 transition"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
+          {photoUrls.length === 0 && (
+            <p className="text-sm text-gray-500 dark:text-gray-400">No photos available</p>
+          )}
+          <div className="flex flex-wrap gap-3">
+            {resource.layoutMapUrl && (
+              <a
+                href={resource.layoutMapUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <Image className="h-4 w-4" />
+                Open Layout Map
+              </a>
+            )}
+            {resource.view360Url && (
+              <a
+                href={resource.view360Url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <Link2 className="h-4 w-4" />
+                Open 360 View
+              </a>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Work History */}
+      <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10">
+              <FileText className="h-5 w-5 text-blue-700 dark:text-blue-300" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Weekly Resource Report Card</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Auto-generated summary for {weeklyReport ? `${formatDate(weeklyReport.weekStart)} to ${formatDate(weeklyReport.weekEnd)}` : 'this week'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleDownloadWeeklyReport}
+            disabled={reportDownloading || !weeklyReport}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            {reportDownloading ? 'Preparing PDF...' : 'Download PDF'}
+          </button>
+        </div>
+
+        {reportLoading ? (
+          <div className="mt-6">
+            <LoadingSpinner />
+          </div>
+        ) : weeklyReport ? (
+          <>
+            <p className="mt-5 text-sm leading-6 text-gray-600 dark:text-gray-300">
+              {weeklyReport.operationalSummary}
+            </p>
+
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {[
+                { label: 'Bookings', value: weeklyReport.totalBookings, subtext: `${weeklyReport.approvedBookings} approved` },
+                { label: 'Reserved Hours', value: weeklyReport.totalReservedHours, subtext: `${weeklyReport.averageAttendees} avg attendees` },
+                { label: 'Check-ins', value: `${weeklyReport.checkInRate}%`, subtext: `${weeklyReport.checkedInBookings} completed` },
+                { label: 'Tickets', value: weeklyReport.ticketsOpened, subtext: `${weeklyReport.ticketsResolved} resolved this week` },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 p-4"
+                >
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.label}</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{item.value}</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.subtext}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Peak day</p>
+                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestDay}</p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Peak time</p>
+                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestTimeRange}</p>
+              </div>
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Utilization band</p>
+                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.utilizationBand}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {weeklyReport.openTickets} active maintenance ticket{weeklyReport.openTickets !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+            Weekly report data is unavailable right now.
+          </p>
+        )}
+      </div>
+
       <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         <button
           onClick={() => setHistoryOpen(!historyOpen)}
@@ -231,10 +567,16 @@ export default function ResourceDetailPage() {
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-white">Maintenance History</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{workHistory.length} past issue{workHistory.length !== 1 ? 's' : ''} for this resource</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {workHistory.length} past issue{workHistory.length !== 1 ? 's' : ''} for this resource
+              </p>
             </div>
           </div>
-          {historyOpen ? <ChevronUp className="h-5 w-5 text-gray-400" /> : <ChevronDown className="h-5 w-5 text-gray-400" />}
+          {historyOpen ? (
+            <ChevronUp className="h-5 w-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-gray-400" />
+          )}
         </button>
 
         {historyOpen && (
@@ -250,7 +592,7 @@ export default function ResourceDetailPage() {
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      #{t.id} — {t.category?.replace(/_/g, ' ')}
+                      #{t.id} - {t.category?.replace(/_/g, ' ')}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t.description}</p>
                   </div>
