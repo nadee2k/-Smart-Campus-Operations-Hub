@@ -1,11 +1,12 @@
 spring:
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
   application:
     name: smart-campus-hub
-
   datasource:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5431}/${DB_NAME:smartcampus}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:12345}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -16,6 +17,18 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  mail:
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:25}
+    username: ${SPRING_MAIL_USERNAME:no-reply@smartcampus.local}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        debug: ${SPRING_MAIL_DEBUG:false}
+        smtp:
+          auth: ${SPRING_MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:false}
   security:
     oauth2:
       client:

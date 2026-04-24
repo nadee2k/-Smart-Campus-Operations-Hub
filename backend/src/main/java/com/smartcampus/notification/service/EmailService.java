@@ -1,6 +1,5 @@
 package com.smartcampus.notification.service;
 
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +14,7 @@ public class EmailService {
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
     
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:no-reply@smartcampus.local}")
     private String fromEmail;
 
     @Autowired
@@ -25,15 +24,19 @@ public class EmailService {
 
     public void sendEmail(String to, String subject, String body) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(body);
-            mailSender.send(message);
+            sendEmailOrThrow(to, subject, body);
             log.info("Email sent successfully to: {} from: {}", to, fromEmail);
         } catch (Exception e) {
             log.error("Failed to send email to: {} from: {}", to, fromEmail, e);
         }
+    }
+
+    public void sendEmailOrThrow(String to, String subject, String body) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(body);
+        mailSender.send(message);
     }
 }
