@@ -54,7 +54,7 @@ export default function BookingAdminPage() {
 
   const fetchBookings = () => {
     setLoading(true);
-    const params = { page, size: 10 };
+    const params = { page, size: 10, sort: 'created_at,desc' };
     if (statusFilter !== 'ALL') params.status = statusFilter;
     bookingService
       .getAll(params)

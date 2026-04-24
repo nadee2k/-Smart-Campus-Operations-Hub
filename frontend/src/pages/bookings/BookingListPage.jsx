@@ -7,7 +7,7 @@ import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
-import { Plus, XCircle, LogIn, Download } from 'lucide-react';
+import { Plus, XCircle, LogIn, Download, Eye } from 'lucide-react';
 import { exportCsv } from '../../utils/exportCsv';
 import BookingQRCode from '../../components/bookings/BookingQRCode';
 import { useAuth } from '../../context/AuthContext';
@@ -49,7 +49,7 @@ export default function BookingListPage() {
   const fetchBookings = () => {
     setLoading(true);
     bookingService
-      .getMyBookings({ page, size: 10 })
+      .getMyBookings({ page, size: 10, sort: 'createdAt,desc' })
       .then((res) => {
         const data = res.data;
         setBookings(data.content ?? data ?? []);
@@ -143,7 +143,9 @@ export default function BookingListPage() {
                     className={`border-l-4 ${ROW_BORDER_MAP[booking.status] || 'border-l-transparent'} hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors`}
                   >
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                      {booking.resource?.name ?? booking.resourceName ?? '—'}
+                      <Link to={`/bookings/${booking.id}`} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                        {booking.resource?.name ?? booking.resourceName ?? '—'}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       <span>{formatDateTimeRange(booking.startTime, booking.endTime)}</span>
@@ -165,6 +167,14 @@ export default function BookingListPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right flex justify-end gap-1">
+                      <Link
+                        to={`/bookings/${booking.id}`}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                        title="View details"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        View
+                      </Link>
                       <BookingQRCode booking={booking} />
                       {canCheckIn(booking) && (
                         <button
