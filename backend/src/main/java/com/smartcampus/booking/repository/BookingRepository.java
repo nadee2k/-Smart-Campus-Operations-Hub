@@ -68,6 +68,29 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            nativeQuery = true)
     List<Object[]> countByHour();
 
+    @Query(value = "SELECT * FROM bookings b WHERE b.resource_id = :resourceId " +
+           "AND b.status = 'WAITLISTED' " +
+           "AND b.start_time = :startTime AND b.end_time = :endTime " +
+           "ORDER BY b.created_at ASC",
+           nativeQuery = true)
+    List<Booking> findWaitlistedByResourceAndTime(
+            @Param("resourceId") Long resourceId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
+
+    @Query(value = "SELECT COUNT(*) FROM bookings b WHERE b.resource_id = :resourceId " +
+           "AND b.status = 'WAITLISTED' " +
+           "AND b.start_time = :startTime AND b.end_time = :endTime " +
+           "AND b.created_at < :createdAt",
+           nativeQuery = true)
+    long countWaitlistAheadOf(
+            @Param("resourceId") Long resourceId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("createdAt") LocalDateTime createdAt);
+
+    Page<Booking> findByUserIdAndStatus(Long userId, BookingStatus status, Pageable pageable);
+
     @Query(value = "SELECT b.resource_id, r.name, COUNT(*) as cnt " +
            "FROM bookings b JOIN resources r ON b.resource_id = r.id " +
            "WHERE b.status = 'APPROVED' " +

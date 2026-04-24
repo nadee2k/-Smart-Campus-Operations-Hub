@@ -69,9 +69,6 @@ public class BookingServiceImpl implements BookingService {
 
         List<Booking> conflicts = bookingRepository.findConflicting(
                 resource.getId(), request.getStartTime(), request.getEndTime());
-        if (!conflicts.isEmpty()) {
-            throw new ConflictException("Time slot conflicts with an existing booking");
-        }
 
         User user = userService.findById(userId);
 
@@ -82,8 +79,24 @@ public class BookingServiceImpl implements BookingService {
         booking.setEndTime(request.getEndTime());
         booking.setPurpose(request.getPurpose());
         booking.setExpectedAttendees(request.getExpectedAttendees());
-        booking.setStatus(BookingStatus.PENDING);
 
+        if (!conflicts.isEmpty()) {
+            if (!Boolean.TRUE.equals(request.getJoinWaitlist())) {
+                throw new ConflictException("Time slot conflicts with an existing booking");
+            }
+            booking.setStatus(BookingStatus.WAITLISTED);
+            Booking saved = bookingRepository.save(booking);
+            int position = (int) bookingRepository.countWaitlistAheadOf(
+                    resource.getId(), request.getStartTime(), request.getEndTime(), saved.getCreatedAt()) + 1;
+            notificationService.sendNotification(userId, "WAITLIST_JOINED",
+                    "You've joined the waitlist for " + resource.getName() + " (position #" + position + "). We'll notify you when a slot opens.",
+                    "BOOKING", saved.getId());
+            activityLogService.log(userId, user.getName(), "WAITLIST_JOINED", "BOOKING", saved.getId(),
+                    "Joined waitlist for " + resource.getName());
+            return toResponse(saved);
+        }
+
+        booking.setStatus(BookingStatus.PENDING);
         Booking saved = bookingRepository.save(booking);
         activityLogService.log(userId, user.getName(), "BOOKING_CREATED", "BOOKING", saved.getId(), "Booked " + resource.getName());
         return toResponse(saved);
@@ -226,6 +239,7 @@ public class BookingServiceImpl implements BookingService {
         Booking saved = bookingRepository.save(booking);
         activityLogService.log(userId, booking.getUser().getName(), "BOOKING_CANCELLED", "BOOKING", saved.getId(), "Cancelled booking for " + booking.getResource().getName());
         resourceWatchService.notifyWatchersResourceAvailable(saved);
+        promoteFromWaitlist(saved);
         return toResponse(saved);
     }
 
@@ -481,11 +495,55 @@ public class BookingServiceImpl implements BookingService {
         };
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<BookingResponse> getMyWaitlistedBookings(Long userId, org.springframework.data.domain.Pageable pageable) {
+        return bookingRepository.findByUserIdAndStatus(userId, BookingStatus.WAITLISTED, pageable)
+                .map(this::toResponse);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse leaveWaitlist(Long bookingId, Long userId) {
+        Booking booking = findById(bookingId);
+        if (!booking.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("You can only leave your own waitlist");
+        }
+        if (booking.getStatus() != BookingStatus.WAITLISTED) {
+            throw new BadRequestException("Booking is not on the waitlist");
+        }
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancellationReason("Left waitlist");
+        Booking saved = bookingRepository.save(booking);
+        activityLogService.log(userId, booking.getUser().getName(), "WAITLIST_LEFT", "BOOKING", saved.getId(),
+                "Left waitlist for " + booking.getResource().getName());
+        return toResponse(saved);
+    }
+
+    private void promoteFromWaitlist(Booking freed) {
+        List<Booking> waitlisted = bookingRepository.findWaitlistedByResourceAndTime(
+                freed.getResource().getId(), freed.getStartTime(), freed.getEndTime());
+        if (!waitlisted.isEmpty()) {
+            Booking first = waitlisted.get(0);
+            first.setStatus(BookingStatus.PENDING);
+            bookingRepository.save(first);
+            notificationService.sendNotification(
+                    first.getUser().getId(),
+                    "WAITLIST_PROMOTED",
+                    "A slot opened up! Your waitlisted booking for " + freed.getResource().getName() +
+                    " is now Pending — awaiting admin approval.",
+                    "BOOKING", first.getId());
+            activityLogService.log(first.getUser().getId(), first.getUser().getName(),
+                    "WAITLIST_PROMOTED", "BOOKING", first.getId(),
+                    "Promoted from waitlist to PENDING for " + freed.getResource().getName());
+        }
+    }
+
     private void validateTransition(Booking booking, BookingStatus target) {
         BookingStatus current = booking.getStatus();
         boolean valid = switch (target) {
             case APPROVED, REJECTED -> current == BookingStatus.PENDING;
-            case CANCELLED -> current == BookingStatus.PENDING || current == BookingStatus.APPROVED;
+            case CANCELLED -> current == BookingStatus.PENDING || current == BookingStatus.APPROVED || current == BookingStatus.WAITLISTED;
             default -> false;
         };
         if (!valid) {
@@ -500,6 +558,11 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private BookingResponse toResponse(Booking b) {
+        Integer waitlistPosition = null;
+        if (b.getStatus() == BookingStatus.WAITLISTED && b.getCreatedAt() != null) {
+            waitlistPosition = (int) bookingRepository.countWaitlistAheadOf(
+                    b.getResource().getId(), b.getStartTime(), b.getEndTime(), b.getCreatedAt()) + 1;
+        }
         return new BookingResponse(
                 b.getId(),
                 b.getResource().getId(),
@@ -515,7 +578,8 @@ public class BookingServiceImpl implements BookingService {
                 b.getCancellationReason(),
                 b.getCheckedIn(),
                 b.getCheckedInAt(),
-                b.getCreatedAt()
+                b.getCreatedAt(),
+                waitlistPosition
         );
     }
 }

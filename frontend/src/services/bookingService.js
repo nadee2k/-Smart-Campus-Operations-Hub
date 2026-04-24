@@ -12,4 +12,6 @@ export const bookingService = {
   checkIn: (id) => api.patch(`/bookings/${id}/check-in`),
   getCalendar: (params) => api.get('/bookings/calendar', { params }),
   getSuggestions: (params) => api.get('/bookings/suggestions', { params }),
+  getMyWaitlistedBookings: (params) => api.get('/bookings/waitlist/my', { params }),
+  leaveWaitlist: (id) => api.delete(`/bookings/${id}/waitlist`),
 };

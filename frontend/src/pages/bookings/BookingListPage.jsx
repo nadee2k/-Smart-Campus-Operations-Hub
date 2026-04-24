@@ -7,7 +7,7 @@ import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
-import { Plus, XCircle, LogIn, Download, Eye } from 'lucide-react';
+import { Plus, XCircle, LogIn, Download, Eye, ListOrdered } from 'lucide-react';
 import { exportCsv } from '../../utils/exportCsv';
 import BookingQRCode from '../../components/bookings/BookingQRCode';
 import { useAuth } from '../../context/AuthContext';
@@ -17,6 +17,7 @@ const ROW_BORDER_MAP = {
   APPROVED: 'border-l-emerald-400',
   REJECTED: 'border-l-red-400',
   CANCELLED: 'border-l-gray-400',
+  WAITLISTED: 'border-l-indigo-400',
 };
 
 function formatDateTimeRange(start, end) {
@@ -45,6 +46,7 @@ export default function BookingListPage() {
   const [bookingToCancel, setBookingToCancel] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [checkingIn, setCheckingIn] = useState({});
+  const [leavingWaitlist, setLeavingWaitlist] = useState({});
 
   const fetchBookings = () => {
     setLoading(true);
@@ -90,6 +92,15 @@ export default function BookingListPage() {
   };
 
   const canCancel = (status) => ['PENDING', 'APPROVED'].includes(status);
+
+  const handleLeaveWaitlist = (id) => {
+    setLeavingWaitlist((p) => ({ ...p, [id]: true }));
+    bookingService
+      .leaveWaitlist(id)
+      .then(() => { toast.success('Removed from waitlist'); fetchBookings(); })
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to leave waitlist'))
+      .finally(() => setLeavingWaitlist((p) => ({ ...p, [id]: false })));
+  };
 
   return (
     <div>
@@ -160,6 +171,11 @@ export default function BookingListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={booking.status} />
+                      {booking.status === 'WAITLISTED' && booking.waitlistPosition && (
+                        <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                          <ListOrdered className="h-3 w-3" />#{booking.waitlistPosition} in line
+                        </span>
+                      )}
                       {booking.status === 'REJECTED' && booking.adminComment && (
                         <p className="mt-1 text-xs text-red-500 dark:text-red-400 truncate max-w-[200px]" title={booking.adminComment}>
                           Reason: {booking.adminComment}
@@ -190,6 +206,16 @@ export default function BookingListPage() {
                         <span className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                           <LogIn className="h-3.5 w-3.5" /> Checked In
                         </span>
+                      )}
+                      {booking.status === 'WAITLISTED' && (
+                        <button
+                          onClick={() => handleLeaveWaitlist(booking.id)}
+                          disabled={leavingWaitlist[booking.id]}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          {leavingWaitlist[booking.id] ? '…' : 'Leave Waitlist'}
+                        </button>
                       )}
                       {canCancel(booking.status) && (
                         <button

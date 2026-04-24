@@ -14,6 +14,7 @@ import {
   Sparkles,
   AlertTriangle,
   Monitor,
+  ListOrdered,
 } from 'lucide-react';
 
 const TIMELINE_START = 8;
@@ -324,6 +325,8 @@ export default function BookingCreatePage() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [conflictDetected, setConflictDetected] = useState(false);
+  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
 
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
@@ -401,35 +404,50 @@ export default function BookingCreatePage() {
       .finally(() => setLoadingSuggestions(false));
   };
 
+  const buildPayload = (joinWaitlist = false) => ({
+    resourceId: form.resourceId,
+    startTime: form.startTime,
+    endTime: form.endTime,
+    purpose: form.purpose.trim(),
+    expectedAttendees: Number(form.expectedAttendees),
+    joinWaitlist,
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     setSuggestions([]);
-    const payload = {
-      resourceId: form.resourceId,
-      startTime: form.startTime,
-      endTime: form.endTime,
-      purpose: form.purpose.trim(),
-      expectedAttendees: Number(form.expectedAttendees),
-    };
-
+    setConflictDetected(false);
     setSubmitting(true);
     bookingService
-      .create(payload)
+      .create(buildPayload())
       .then(() => {
         toast.success('Booking created successfully');
         navigate('/bookings');
       })
       .catch((err) => {
         if (err.response?.status === 409) {
-          toast.error('Time slot conflicts with an existing booking');
+          setConflictDetected(true);
           fetchSuggestions(form.resourceId, form.startTime, form.endTime);
         } else {
           toast.error(err.response?.data?.message || 'Failed to create booking');
         }
       })
       .finally(() => setSubmitting(false));
+  };
+
+  const handleJoinWaitlist = () => {
+    setJoiningWaitlist(true);
+    bookingService
+      .create(buildPayload(true))
+      .then((res) => {
+        const pos = res.data?.waitlistPosition;
+        toast.success(pos ? `Added to waitlist — you're #${pos} in line!` : 'Added to waitlist!');
+        navigate('/bookings');
+      })
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to join waitlist'))
+      .finally(() => setJoiningWaitlist(false));
   };
 
   const applySuggestion = (s) => {
@@ -606,6 +624,35 @@ export default function BookingCreatePage() {
               )}
             </div>
           </div>
+
+          {/* Waitlist Banner — shown when conflict detected */}
+          {conflictDetected && (
+            <div className="rounded-2xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50 dark:bg-indigo-950/30 p-5 space-y-3">
+              <div className="flex items-start gap-3">
+                <ListOrdered className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">
+                    This time slot is already taken
+                  </p>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">
+                    Join the waitlist and we'll automatically notify you and move your booking to Pending if the slot becomes available.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleJoinWaitlist}
+                disabled={joiningWaitlist}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-indigo-500/20"
+              >
+                {joiningWaitlist ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Joining…</>
+                ) : (
+                  <><ListOrdered className="h-4 w-4" /> Join Waitlist</>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">

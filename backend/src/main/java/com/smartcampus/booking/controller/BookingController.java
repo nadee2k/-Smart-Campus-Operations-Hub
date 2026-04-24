@@ -108,6 +108,19 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getCalendar(resourceId, start, end));
     }
 
+    @GetMapping("/waitlist/my")
+    public ResponseEntity<PageResponse<BookingResponse>> getMyWaitlistedBookings(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Long userId = AuthUtil.getCurrentUserId();
+        return ResponseEntity.ok(PageResponse.of(bookingService.getMyWaitlistedBookings(userId, pageable)));
+    }
+
+    @DeleteMapping("/{id}/waitlist")
+    public ResponseEntity<BookingResponse> leaveWaitlist(@PathVariable Long id) {
+        Long userId = AuthUtil.getCurrentUserId();
+        return ResponseEntity.ok(bookingService.leaveWaitlist(id, userId));
+    }
+
     @GetMapping("/suggestions")
     public ResponseEntity<java.util.List<java.util.Map<String, Object>>> getSuggestions(
             @RequestParam Long resourceId,

@@ -38,4 +38,8 @@ public interface BookingService {
     List<BookingResponse> getCalendar(Long resourceId, LocalDateTime start, LocalDateTime end);
 
     List<Map<String, Object>> getSuggestions(Long resourceId, java.time.LocalDate date, int durationMinutes);
+
+    Page<BookingResponse> getMyWaitlistedBookings(Long userId, Pageable pageable);
+
+    BookingResponse leaveWaitlist(Long bookingId, Long userId);
 }

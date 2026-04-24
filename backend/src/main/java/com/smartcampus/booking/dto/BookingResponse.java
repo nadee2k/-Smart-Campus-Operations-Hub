@@ -18,5 +18,6 @@ public record BookingResponse(
         String cancellationReason,
         Boolean checkedIn,
         LocalDateTime checkedInAt,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        Integer waitlistPosition
 ) {}
