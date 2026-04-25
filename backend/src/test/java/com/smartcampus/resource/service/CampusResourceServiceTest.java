@@ -1,22 +1,29 @@
 package com.smartcampus.resource.service;
 
 import com.smartcampus.activity.service.ActivityLogService;
+import com.smartcampus.auth.entity.User;
+import com.smartcampus.auth.repository.UserRepository;
 import com.smartcampus.booking.entity.Booking;
 import com.smartcampus.booking.entity.BookingStatus;
 import com.smartcampus.booking.repository.BookingRepository;
+import com.smartcampus.common.exception.AccessDeniedException;
 import com.smartcampus.common.exception.ConflictException;
 import com.smartcampus.common.exception.ResourceNotFoundException;
 import com.smartcampus.resource.dto.ResourceBlackoutRequest;
 import com.smartcampus.resource.dto.ResourceBlackoutResponse;
 import com.smartcampus.resource.dto.ResourceRequest;
+import com.smartcampus.resource.dto.ResourceReviewRequest;
+import com.smartcampus.resource.dto.ResourceReviewResponse;
 import com.smartcampus.resource.dto.ResourceResponse;
 import com.smartcampus.resource.dto.WeeklyResourceReportResponse;
 import com.smartcampus.resource.entity.CampusResource;
 import com.smartcampus.resource.entity.ResourceBlackout;
+import com.smartcampus.resource.entity.ResourceReview;
 import com.smartcampus.resource.entity.ResourceStatus;
 import com.smartcampus.resource.entity.ResourceType;
 import com.smartcampus.resource.repository.CampusResourceRepository;
 import com.smartcampus.resource.repository.ResourceBlackoutRepository;
+import com.smartcampus.resource.repository.ResourceReviewRepository;
 import com.smartcampus.ticket.repository.TicketRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,7 +60,13 @@ class CampusResourceServiceTest {
     private ResourceBlackoutRepository blackoutRepository;
 
     @Mock
+    private ResourceReviewRepository reviewRepository;
+
+    @Mock
     private TicketRepository ticketRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @Mock
     private ModelMapper modelMapper;
@@ -67,6 +80,8 @@ class CampusResourceServiceTest {
     private CampusResource resource;
     private ResourceRequest request;
     private ResourceBlackoutRequest blackoutRequest;
+    private ResourceReviewRequest reviewRequest;
+    private User user;
 
     @BeforeEach
     void setUp() {
@@ -84,6 +99,11 @@ class CampusResourceServiceTest {
         resource.setCreatedAt(LocalDateTime.now());
         resource.setUpdatedAt(LocalDateTime.now());
 
+        user = new User();
+        user.setId(11L);
+        user.setName("Alice");
+        user.setPictureUrl("https://example.com/alice.png");
+
         request = new ResourceRequest();
         request.setName("Main Hall");
         request.setType(ResourceType.LECTURE_HALL);
@@ -96,6 +116,10 @@ class CampusResourceServiceTest {
         blackoutRequest.setReason("Projector replacement");
         blackoutRequest.setStartTime(LocalDateTime.of(2026, 4, 26, 9, 0));
         blackoutRequest.setEndTime(LocalDateTime.of(2026, 4, 26, 12, 0));
+
+        reviewRequest = new ResourceReviewRequest();
+        reviewRequest.setRating(5);
+        reviewRequest.setComment("Excellent study environment");
     }
 
     @Test
@@ -262,6 +286,70 @@ class CampusResourceServiceTest {
         assertThatThrownBy(() -> service.createBlackout(1L, blackoutRequest))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("existing booking");
+    }
+
+    @Test
+    void getReviews_shouldReturnMappedReviews() {
+        ResourceReview review = new ResourceReview();
+        review.setId(21L);
+        review.setResource(resource);
+        review.setUser(user);
+        review.setRating(5);
+        review.setComment("Excellent study environment");
+        review.setCreatedAt(LocalDateTime.of(2026, 4, 24, 8, 0));
+        review.setUpdatedAt(LocalDateTime.of(2026, 4, 24, 8, 30));
+
+        when(repository.findById(1L)).thenReturn(Optional.of(resource));
+        when(reviewRepository.findByResourceIdOrderByUpdatedAtDescCreatedAtDesc(1L)).thenReturn(List.of(review));
+
+        List<ResourceReviewResponse> result = service.getReviews(1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).userName()).isEqualTo("Alice");
+        assertThat(result.get(0).rating()).isEqualTo(5);
+    }
+
+    @Test
+    void upsertReview_shouldCreateOrUpdateReview() {
+        when(repository.findById(1L)).thenReturn(Optional.of(resource));
+        when(userRepository.findById(11L)).thenReturn(Optional.of(user));
+        when(reviewRepository.findByResourceIdAndUserId(1L, 11L)).thenReturn(Optional.empty());
+        when(reviewRepository.save(any(ResourceReview.class))).thenAnswer(invocation -> {
+            ResourceReview saved = invocation.getArgument(0);
+            saved.setId(44L);
+            saved.setCreatedAt(LocalDateTime.of(2026, 4, 24, 9, 0));
+            saved.setUpdatedAt(LocalDateTime.of(2026, 4, 24, 9, 0));
+            return saved;
+        });
+
+        ResourceReviewResponse result = service.upsertReview(1L, reviewRequest, 11L);
+
+        assertThat(result.id()).isEqualTo(44L);
+        assertThat(result.userId()).isEqualTo(11L);
+        assertThat(result.comment()).isEqualTo("Excellent study environment");
+        verify(activityLogService).log(
+                eq(11L),
+                eq("Alice"),
+                eq("RESOURCE_REVIEW_CREATED"),
+                eq("RESOURCE"),
+                eq(1L),
+                contains("5-star review")
+        );
+    }
+
+    @Test
+    void deleteReview_shouldRejectWhenDifferentUserAndNotAdmin() {
+        ResourceReview review = new ResourceReview();
+        review.setId(33L);
+        review.setResource(resource);
+        review.setUser(user);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(resource));
+        when(reviewRepository.findByIdAndResourceId(33L, 1L)).thenReturn(Optional.of(review));
+
+        assertThatThrownBy(() -> service.deleteReview(1L, 33L, 99L, false))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("only delete your own review");
     }
 
     @Test

@@ -5,6 +5,8 @@ import com.smartcampus.assistant.dto.AssistantChatRequest;
 import com.smartcampus.assistant.dto.AssistantChatResponse;
 import com.smartcampus.assistant.dto.AssistantResourceSuggestion;
 import com.smartcampus.auth.entity.User;
+import com.smartcampus.booking.dto.BookingResponse;
+import com.smartcampus.booking.entity.BookingStatus;
 import com.smartcampus.auth.service.UserService;
 import com.smartcampus.booking.service.BookingService;
 import com.smartcampus.common.exception.BadRequestException;
@@ -20,6 +22,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -76,16 +79,38 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                 .stream()
                 .map(this::toResourceResponse)
                 .toList();
+        SwapContext swapContext = buildSwapContext(latestUserMessage, request.getResourceId(), userId);
+        String suggestionQuery = buildSuggestionQuery(latestUserMessage, swapContext.targetBooking());
 
-        List<AssistantResourceSuggestion> suggestions = findSuggestions(resources, latestUserMessage, request.getResourceId());
-        String fallbackAnswer = buildFallbackAnswer(user, latestUserMessage, suggestions, request.getResourceId(), resources);
+        List<AssistantResourceSuggestion> suggestions = findSuggestions(
+                resources,
+                suggestionQuery,
+                request.getResourceId(),
+                swapContext.targetBooking()
+        );
+        String fallbackAnswer = buildFallbackAnswer(
+                user,
+                latestUserMessage,
+                suggestions,
+                request.getResourceId(),
+                resources,
+                swapContext
+        );
 
         if (!StringUtils.hasText(openAiApiKey)) {
             return new AssistantChatResponse(fallbackAnswer, suggestions, false, "fallback");
         }
 
         try {
-            String aiAnswer = generateAiAnswer(user, request.getMessages(), suggestions, request.getResourceId(), resources, fallbackAnswer);
+            String aiAnswer = generateAiAnswer(
+                    user,
+                    request.getMessages(),
+                    suggestions,
+                    request.getResourceId(),
+                    resources,
+                    fallbackAnswer,
+                    swapContext
+            );
             return new AssistantChatResponse(aiAnswer, suggestions, true, "openai");
         } catch (RestClientException | IllegalStateException exception) {
             return new AssistantChatResponse(fallbackAnswer, suggestions, false, "fallback");
@@ -97,12 +122,13 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                                     List<AssistantResourceSuggestion> suggestions,
                                     Long selectedResourceId,
                                     List<ResourceResponse> resources,
-                                    String fallbackAnswer) {
+                                    String fallbackAnswer,
+                                    SwapContext swapContext) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("model", openAiModel);
         payload.put("reasoning", Map.of("effort", "low"));
         payload.put("instructions", buildInstructions());
-        payload.put("input", buildInputMessages(user, messages, suggestions, selectedResourceId, resources, fallbackAnswer));
+        payload.put("input", buildInputMessages(user, messages, suggestions, selectedResourceId, resources, fallbackAnswer, swapContext));
 
         Map<String, Object> response = restClient.post()
                 .uri("/responses")
@@ -124,12 +150,13 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                                                          List<AssistantResourceSuggestion> suggestions,
                                                          Long selectedResourceId,
                                                          List<ResourceResponse> resources,
-                                                         String fallbackAnswer) {
+                                                         String fallbackAnswer,
+                                                         SwapContext swapContext) {
         List<Map<String, Object>> input = new ArrayList<>();
 
         input.add(Map.of(
                 "role", "developer",
-                "content", buildContextBlock(user, suggestions, selectedResourceId, resources, fallbackAnswer)
+                "content", buildContextBlock(user, suggestions, selectedResourceId, resources, fallbackAnswer, swapContext)
         ));
 
         messages.stream()
@@ -150,6 +177,7 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                 Be helpful, concise, and actionable.
                 If the user asks for recommendations, explain the top 1-3 matches and why they fit.
                 If the user asks to book, guide them toward the provided booking links rather than inventing a completed booking.
+                If the user asks to swap a booking, only discuss swap guidance when the application context says they have an active booking.
                 Do not claim live availability beyond the provided data.
                 """;
     }
@@ -158,7 +186,8 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                                      List<AssistantResourceSuggestion> suggestions,
                                      Long selectedResourceId,
                                      List<ResourceResponse> resources,
-                                     String fallbackAnswer) {
+                                     String fallbackAnswer,
+                                     SwapContext swapContext) {
         String selectedResource = resources.stream()
                 .filter(resource -> selectedResourceId != null && selectedResourceId.equals(resource.id()))
                 .findFirst()
@@ -174,6 +203,7 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                         safe(resource.availabilityEndTime())
                 ))
                 .orElse("No resource is currently selected.");
+        String swapBookingContext = buildSwapBookingContext(swapContext);
 
         String suggestionText = suggestions.isEmpty()
                 ? "No strong resource matches were found from the local data."
@@ -197,7 +227,11 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
 
                 Local booking guidance:
                 - If the user wants to reserve a room, point them to the provided booking links.
+                - For swap requests, use the active booking context below and never imply a swap already happened.
                 - Suggestions are already ranked by the application.
+
+                Active swap context:
+                %s
 
                 Selected resource context:
                 %s
@@ -210,6 +244,7 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                 """.formatted(
                 user.getName(),
                 user.getRole(),
+                swapBookingContext,
                 selectedResource,
                 suggestionText,
                 fallbackAnswer
@@ -248,12 +283,13 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
 
     private List<AssistantResourceSuggestion> findSuggestions(List<ResourceResponse> resources,
                                                               String query,
-                                                              Long selectedResourceId) {
+                                                              Long selectedResourceId,
+                                                              BookingResponse swapBooking) {
         Integer attendeeCount = extractAttendeeCount(query);
         String loweredQuery = query.toLowerCase(Locale.US);
 
         return resources.stream()
-                .map(resource -> scoreSuggestion(resource, loweredQuery, attendeeCount, selectedResourceId))
+                .map(resource -> scoreSuggestion(resource, loweredQuery, attendeeCount, selectedResourceId, swapBooking))
                 .filter(scored -> scored.score > 0)
                 .sorted(Comparator.comparingInt(ScoredSuggestion::score).reversed())
                 .limit(3)
@@ -264,7 +300,8 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
     private ScoredSuggestion scoreSuggestion(ResourceResponse resource,
                                              String loweredQuery,
                                              Integer attendeeCount,
-                                             Long selectedResourceId) {
+                                             Long selectedResourceId,
+                                             BookingResponse swapBooking) {
         int score = 0;
         List<String> reasons = new ArrayList<>();
 
@@ -286,6 +323,9 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
         if (selectedResourceId != null && selectedResourceId.equals(resource.id())) {
             score += 15;
             reasons.add("matches the resource you were already viewing");
+        }
+        if (swapBooking != null && swapBooking.resourceId().equals(resource.id())) {
+            score -= 35;
         }
 
         String type = resource.type() != null ? resource.type().name() : "";
@@ -349,7 +389,7 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                         safe(resource.location()),
                         resource.status() != null ? resource.status().name().replace('_', ' ') : "UNKNOWN",
                         String.join(", ", reasons.stream().distinct().limit(2).toList()),
-                        "/bookings/create?resourceId=" + resource.id()
+                        buildBookingUrl(resource.id(), swapBooking)
                 )
         );
     }
@@ -359,6 +399,19 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                                        List<AssistantResourceSuggestion> suggestions,
                                        Long selectedResourceId,
                                        List<ResourceResponse> resources) {
+        return buildFallbackAnswer(user, latestUserMessage, suggestions, selectedResourceId, resources, new SwapContext(false, List.of(), null));
+    }
+
+    private String buildFallbackAnswer(User user,
+                                       String latestUserMessage,
+                                       List<AssistantResourceSuggestion> suggestions,
+                                       Long selectedResourceId,
+                                       List<ResourceResponse> resources,
+                                       SwapContext swapContext) {
+        if (swapContext.swapRequested()) {
+            return buildSwapFallbackAnswer(user, suggestions, swapContext);
+        }
+
         if (selectedResourceId != null) {
             ResourceResponse selected = resources.stream()
                     .filter(resource -> selectedResourceId.equals(resource.id()))
@@ -392,6 +445,40 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                 + ". Use the booking action on any suggestion card to continue with a reservation.";
     }
 
+    private String buildSwapFallbackAnswer(User user,
+                                           List<AssistantResourceSuggestion> suggestions,
+                                           SwapContext swapContext) {
+        if (swapContext.activeBookings().isEmpty()) {
+            return user.getName() + ", you do not have any active upcoming bookings to swap right now. Create or keep a booking first, then ask for a resource swap request.";
+        }
+
+        BookingResponse booking = swapContext.targetBooking();
+        String bookingWindow = formatBookingWindow(booking);
+        if (suggestions.isEmpty()) {
+            return String.format(
+                    Locale.US,
+                    "%s, I found your active booking for %s on %s, but I could not find a strong alternative resource from the current campus data. Try asking for a location, room type, or equipment change for that same booking window.",
+                    user.getName(),
+                    booking.resourceName(),
+                    bookingWindow
+            );
+        }
+
+        String topSuggestionLine = suggestions.stream()
+                .map(suggestion -> suggestion.name() + " (" + suggestion.reason() + ")")
+                .collect(Collectors.joining("; "));
+
+        return String.format(
+                Locale.US,
+                "%s, I found your booking for %s on %s. The closest swap options are %s. Use one of the suggestion actions to start a replacement booking request linked to booking #%d.",
+                user.getName(),
+                booking.resourceName(),
+                bookingWindow,
+                topSuggestionLine,
+                booking.id()
+        );
+    }
+
     private boolean asksAboutResourceDetails(String message) {
         String lowered = message.toLowerCase(Locale.US);
         return lowered.contains("tell me about")
@@ -400,6 +487,92 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                 || lowered.contains("where")
                 || lowered.contains("available")
                 || lowered.contains("status");
+    }
+
+    private SwapContext buildSwapContext(String latestUserMessage, Long selectedResourceId, Long userId) {
+        if (!isSwapRequest(latestUserMessage)) {
+            return new SwapContext(false, List.of(), null);
+        }
+
+        List<BookingResponse> activeBookings = bookingService.getByUser(userId, PageRequest.of(0, 20))
+                .stream()
+                .filter(this::isActiveUpcomingBooking)
+                .sorted(Comparator.comparing(BookingResponse::startTime))
+                .toList();
+
+        BookingResponse targetBooking = activeBookings.stream()
+                .filter(booking -> selectedResourceId != null && selectedResourceId.equals(booking.resourceId()))
+                .findFirst()
+                .orElse(activeBookings.isEmpty() ? null : activeBookings.get(0));
+
+        return new SwapContext(true, activeBookings, targetBooking);
+    }
+
+    private boolean isSwapRequest(String message) {
+        String lowered = message.toLowerCase(Locale.US);
+        boolean mentionsSwapAction = lowered.contains("swap")
+                || lowered.contains("switch")
+                || lowered.contains("change")
+                || lowered.contains("move");
+        boolean mentionsBooking = lowered.contains("booking")
+                || lowered.contains("reservation")
+                || lowered.contains("resource")
+                || lowered.contains("room")
+                || lowered.contains("slot");
+        return mentionsSwapAction && mentionsBooking;
+    }
+
+    private boolean isActiveUpcomingBooking(BookingResponse booking) {
+        return (booking.status() == BookingStatus.PENDING || booking.status() == BookingStatus.APPROVED)
+                && booking.endTime() != null
+                && booking.endTime().isAfter(LocalDateTime.now());
+    }
+
+    private String buildSuggestionQuery(String latestUserMessage, BookingResponse swapBooking) {
+        if (swapBooking == null) {
+            return latestUserMessage;
+        }
+
+        return String.format(
+                Locale.US,
+                "%s %s %s %s %d people",
+                latestUserMessage,
+                safe(swapBooking.resourceName()),
+                safe(swapBooking.purpose()),
+                safe(swapBooking.startTime() != null ? swapBooking.startTime().toLocalDate() : null),
+                swapBooking.expectedAttendees() != null ? swapBooking.expectedAttendees() : 1
+        );
+    }
+
+    private String buildSwapBookingContext(SwapContext swapContext) {
+        if (!swapContext.swapRequested()) {
+            return "No swap request detected.";
+        }
+        if (swapContext.activeBookings().isEmpty()) {
+            return "Swap was requested, but the user has no active upcoming bookings.";
+        }
+        BookingResponse booking = swapContext.targetBooking();
+        return String.format(
+                Locale.US,
+                "Target booking #%d: %s for %s attendees on %s with status %s. User has %d active upcoming booking(s).",
+                booking.id(),
+                booking.resourceName(),
+                booking.expectedAttendees() != null ? booking.expectedAttendees() : 0,
+                formatBookingWindow(booking),
+                booking.status(),
+                swapContext.activeBookings().size()
+        );
+    }
+
+    private String formatBookingWindow(BookingResponse booking) {
+        return booking.startTime() + " to " + booking.endTime();
+    }
+
+    private String buildBookingUrl(Long resourceId, BookingResponse swapBooking) {
+        if (swapBooking == null) {
+            return "/bookings/create?resourceId=" + resourceId;
+        }
+        return "/bookings/create?resourceId=" + resourceId + "&swapBookingId=" + swapBooking.id();
     }
 
     private Integer extractAttendeeCount(String query) {
@@ -427,23 +600,29 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
         return value == null ? "-" : value.toString();
     }
 
-    private ResourceResponse toResourceResponse(com.smartcampus.resource.entity.CampusResource resource) {
+        private ResourceResponse toResourceResponse(com.smartcampus.resource.entity.CampusResource resource) {
+        Long createdById = resource.getCreatedBy() != null
+                ? resource.getCreatedBy().getId()
+                : null;
+
         return new ResourceResponse(
                 resource.getId(),
                 resource.getName(),
                 resource.getType(),
                 resource.getCapacity(),
                 resource.getLocation(),
+                resource.getBuilding(),
+                resource.getEquipment(),
+                resource.getFeatures(),
                 resource.getDescription(),
-                resource.getAmenities(),
-                resource.getPhotoUrls(),
-                resource.getLayoutMapUrl(),
-                resource.getView360Url(),
-                resource.getOwnerName(),
+                resource.getImageUrl(),
                 resource.getDepartment(),
-                resource.getMaintenanceScore(),
-                resource.getAvailabilityStartTime(),
-                resource.getAvailabilityEndTime(),
+                resource.getContactPerson(),
+                resource.getFloor(),
+                resource.getRating(),
+                createdById,
+                resource.getAvailableFrom(),
+                resource.getAvailableTo(),
                 resource.getStatus(),
                 resource.getCreatedAt(),
                 resource.getUpdatedAt()
@@ -451,5 +630,10 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
     }
 
     private record ScoredSuggestion(int score, AssistantResourceSuggestion suggestion) {
+    }
+
+    private record SwapContext(boolean swapRequested,
+                               List<BookingResponse> activeBookings,
+                               BookingResponse targetBooking) {
     }
 }

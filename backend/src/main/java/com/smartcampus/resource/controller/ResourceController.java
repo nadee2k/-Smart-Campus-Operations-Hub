@@ -2,9 +2,12 @@ package com.smartcampus.resource.controller;
 
 import com.smartcampus.common.dto.PageResponse;
 import com.smartcampus.config.security.AuthUtil;
+import com.smartcampus.auth.entity.Role;
 import com.smartcampus.resource.dto.ResourceRequest;
 import com.smartcampus.resource.dto.ResourceBlackoutRequest;
 import com.smartcampus.resource.dto.ResourceBlackoutResponse;
+import com.smartcampus.resource.dto.ResourceReviewRequest;
+import com.smartcampus.resource.dto.ResourceReviewResponse;
 import com.smartcampus.resource.dto.ResourceResponse;
 import com.smartcampus.resource.dto.ResourceWatchListItemResponse;
 import com.smartcampus.resource.dto.ResourceWatchStatusResponse;
@@ -52,6 +55,26 @@ public class ResourceController {
     @GetMapping("/{id}/blackouts")
     public ResponseEntity<List<ResourceBlackoutResponse>> getBlackouts(@PathVariable Long id) {
         return ResponseEntity.ok(resourceService.getBlackouts(id));
+    }
+
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<List<ResourceReviewResponse>> getReviews(@PathVariable Long id) {
+        return ResponseEntity.ok(resourceService.getReviews(id));
+    }
+
+    @PostMapping("/{id}/reviews")
+    public ResponseEntity<ResourceReviewResponse> createOrUpdateReview(@PathVariable Long id,
+                                                                       @Valid @RequestBody ResourceReviewRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(resourceService.upsertReview(id, request, AuthUtil.getCurrentUserId()));
+    }
+
+    @DeleteMapping("/{id}/reviews/{reviewId}")
+    public ResponseEntity<Void> deleteReview(@PathVariable Long id,
+                                             @PathVariable Long reviewId) {
+        var currentUser = AuthUtil.getCurrentUser();
+        resourceService.deleteReview(id, reviewId, currentUser.getId(), currentUser.getRole() == Role.ADMIN);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/blackouts")

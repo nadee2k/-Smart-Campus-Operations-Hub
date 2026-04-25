@@ -3,6 +3,9 @@ import api from './api';
 export const resourceService = {
   getAll: (params) => api.get('/resources', { params }),
   getById: (id) => api.get(`/resources/${id}`),
+  getReviews: (id) => api.get(`/resources/${id}/reviews`),
+  saveReview: (id, data) => api.post(`/resources/${id}/reviews`, data),
+  deleteReview: (id, reviewId) => api.delete(`/resources/${id}/reviews/${reviewId}`),
   getBlackouts: (id) => api.get(`/resources/${id}/blackouts`),
   createBlackout: (id, data) => api.post(`/resources/${id}/blackouts`, data),
   deleteBlackout: (id, blackoutId) => api.delete(`/resources/${id}/blackouts/${blackoutId}`),

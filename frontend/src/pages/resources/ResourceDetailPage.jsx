@@ -31,6 +31,8 @@ import {
   Sparkles,
   Ban,
   Plus,
+  MessageSquare,
+  Star,
 } from 'lucide-react';
 
 function formatTime(val) {
@@ -74,6 +76,32 @@ function getMaintenanceTone(score = 100) {
   return 'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-500/10';
 }
 
+function StarRating({ value, onChange, readonly = false, size = 'md' }) {
+  const starSize = size === 'sm' ? 'h-4 w-4' : 'h-6 w-6';
+
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          disabled={readonly}
+          onClick={() => !readonly && onChange?.(star)}
+          className="disabled:cursor-default transition-transform hover:scale-105"
+        >
+          <Star
+            className={`${starSize} ${
+              star <= value
+                ? 'text-amber-400 fill-amber-400'
+                : 'text-gray-300 dark:text-gray-600'
+            }`}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function ResourceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -94,6 +122,14 @@ export default function ResourceDetailPage() {
   const [blackoutsLoading, setBlackoutsLoading] = useState(true);
   const [blackoutSaving, setBlackoutSaving] = useState(false);
   const [removingBlackoutId, setRemovingBlackoutId] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [removingReviewId, setRemovingReviewId] = useState(null);
+  const [reviewForm, setReviewForm] = useState({
+    rating: 0,
+    comment: '',
+  });
   const [blackoutForm, setBlackoutForm] = useState({
     title: '',
     reason: '',
@@ -134,7 +170,26 @@ export default function ResourceDetailPage() {
       .then((res) => setBlackouts(res.data ?? []))
       .catch(() => setBlackouts([]))
       .finally(() => setBlackoutsLoading(false));
+
+    setReviewsLoading(true);
+    resourceService
+      .getReviews(id)
+      .then((res) => setReviews(res.data ?? []))
+      .catch(() => setReviews([]))
+      .finally(() => setReviewsLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!user) {
+      setReviewForm({ rating: 0, comment: '' });
+      return;
+    }
+    const existingReview = reviews.find((review) => review.userId === user.id);
+    setReviewForm({
+      rating: existingReview?.rating ?? 0,
+      comment: existingReview?.comment ?? '',
+    });
+  }, [reviews, user]);
 
   const handleDelete = () => {
     resourceService
@@ -254,6 +309,76 @@ export default function ResourceDetailPage() {
     }
   };
 
+  const handleSaveReview = async (event) => {
+    event.preventDefault();
+    if (!reviewForm.rating) {
+      toast.error('Choose a rating before submitting your review');
+      return;
+    }
+
+    try {
+      setReviewSaving(true);
+      const res = await resourceService.saveReview(id, {
+        rating: reviewForm.rating,
+        comment: reviewForm.comment.trim() || null,
+      });
+      setReviews((current) => {
+        const next = current.filter((review) => review.userId !== res.data.userId);
+        next.unshift(res.data);
+        return next.sort((left, right) => new Date(right.updatedAt || right.createdAt) - new Date(left.updatedAt || left.createdAt));
+      });
+      setResource((current) => {
+        if (!current) return current;
+        const isUpdate = reviews.some((review) => review.userId === res.data.userId);
+        const nextCount = isUpdate ? (current.reviewCount ?? 0) : (current.reviewCount ?? 0) + 1;
+        const currentTotal = (current.averageRating ?? 0) * (current.reviewCount ?? 0);
+        const previousRating = reviews.find((review) => review.userId === res.data.userId)?.rating ?? 0;
+        const adjustedTotal = isUpdate
+          ? currentTotal - previousRating + res.data.rating
+          : currentTotal + res.data.rating;
+
+        return {
+          ...current,
+          reviewCount: nextCount,
+          averageRating: nextCount > 0 ? Number((adjustedTotal / nextCount).toFixed(1)) : null,
+        };
+      });
+      toast.success(reviews.some((review) => review.userId === res.data.userId) ? 'Review updated' : 'Review added');
+    } catch {
+      // Toast handled by API interceptor.
+    } finally {
+      setReviewSaving(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    const reviewToRemove = reviews.find((review) => review.id === reviewId);
+    if (!reviewToRemove) return;
+
+    try {
+      setRemovingReviewId(reviewId);
+      await resourceService.deleteReview(id, reviewId);
+      setReviews((current) => current.filter((review) => review.id !== reviewId));
+      setResource((current) => {
+        if (!current) return current;
+        const nextCount = Math.max(0, (current.reviewCount ?? 0) - 1);
+        const currentTotal = (current.averageRating ?? 0) * (current.reviewCount ?? 0);
+        const adjustedTotal = currentTotal - reviewToRemove.rating;
+
+        return {
+          ...current,
+          reviewCount: nextCount,
+          averageRating: nextCount > 0 ? Number((adjustedTotal / nextCount).toFixed(1)) : null,
+        };
+      });
+      toast.success('Review removed');
+    } catch {
+      // Toast handled by API interceptor.
+    } finally {
+      setRemovingReviewId(null);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner size="lg" />;
   }
@@ -282,6 +407,8 @@ export default function ResourceDetailPage() {
   const amenities = resource.amenities || [];
   const photoUrls = resource.photoUrls || [];
   const maintenanceScore = getResourceHealthScore(resource);
+  const userReview = user ? reviews.find((review) => review.userId === user.id) : null;
+  const averageRatingLabel = resource.averageRating ? resource.averageRating.toFixed(1) : 'No ratings yet';
 
   return (
     <div>
@@ -543,6 +670,128 @@ export default function ResourceDetailPage() {
               </a>
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-500/10">
+              <MessageSquare className="h-5 w-5 text-amber-700 dark:text-amber-300" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Ratings & Reviews</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Quick feedback from people who have used this resource.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{averageRatingLabel}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {resource.reviewCount ?? 0} review{resource.reviewCount === 1 ? '' : 's'}
+                </p>
+              </div>
+              <StarRating value={Math.round(resource.averageRating ?? 0)} readonly size="sm" />
+            </div>
+          </div>
+        </div>
+
+        {!isTechnician && user && (
+          <form onSubmit={handleSaveReview} className="mt-5 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="font-medium text-gray-900 dark:text-white">
+                  {userReview ? 'Update your review' : 'Leave a review'}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Share a quick rating and any notes that would help other users.
+                </p>
+              </div>
+              <StarRating
+                value={reviewForm.rating}
+                onChange={(rating) => setReviewForm((current) => ({ ...current, rating }))}
+                readonly={reviewSaving}
+              />
+            </div>
+
+            <textarea
+              rows={4}
+              value={reviewForm.comment}
+              onChange={(event) => setReviewForm((current) => ({ ...current, comment: event.target.value }))}
+              placeholder="What worked well? Anything others should know?"
+              className="mt-4 w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            />
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="submit"
+                disabled={reviewSaving}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Star className="h-4 w-4" />
+                {reviewSaving ? 'Saving review...' : userReview ? 'Update review' : 'Submit review'}
+              </button>
+              {userReview && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteReview(userReview.id)}
+                  disabled={removingReviewId === userReview.id}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-red-200 dark:border-red-800 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {removingReviewId === userReview.id ? 'Removing...' : 'Delete my review'}
+                </button>
+              )}
+            </div>
+          </form>
+        )}
+
+        <div className="mt-5 space-y-3">
+          {reviewsLoading ? (
+            <LoadingSpinner />
+          ) : reviews.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              No reviews yet. Be the first to rate this resource.
+            </p>
+          ) : (
+            reviews.map((review) => {
+              const canDeleteReview = isAdmin || user?.id === review.userId;
+              return (
+                <div
+                  key={review.id}
+                  className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 p-4"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <p className="font-semibold text-gray-900 dark:text-white">{review.userName}</p>
+                        <StarRating value={review.rating} readonly size="sm" />
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatDate(review.updatedAt || review.createdAt)}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
+                        {review.comment || 'Rated this resource without additional comments.'}
+                      </p>
+                    </div>
+                    {canDeleteReview && (
+                      <button
+                        onClick={() => handleDeleteReview(review.id)}
+                        disabled={removingReviewId === review.id}
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-full border border-red-200 dark:border-red-800 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {removingReviewId === review.id ? 'Removing...' : 'Delete'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

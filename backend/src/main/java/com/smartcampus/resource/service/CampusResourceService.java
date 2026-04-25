@@ -4,6 +4,8 @@ import com.smartcampus.resource.dto.ResourceRequest;
 import com.smartcampus.resource.dto.ResourceBlackoutRequest;
 import com.smartcampus.resource.dto.ResourceBlackoutResponse;
 import com.smartcampus.resource.dto.ResourceResponse;
+import com.smartcampus.resource.dto.ResourceReviewRequest;
+import com.smartcampus.resource.dto.ResourceReviewResponse;
 import com.smartcampus.resource.dto.WeeklyResourceReportResponse;
 import com.smartcampus.resource.entity.ResourceStatus;
 import com.smartcampus.resource.entity.ResourceType;
@@ -23,6 +25,12 @@ public interface CampusResourceService {
     ResourceBlackoutResponse createBlackout(Long id, ResourceBlackoutRequest request);
 
     void deleteBlackout(Long id, Long blackoutId);
+
+    List<ResourceReviewResponse> getReviews(Long id);
+
+    ResourceReviewResponse upsertReview(Long id, ResourceReviewRequest request, Long userId);
+
+    void deleteReview(Long id, Long reviewId, Long userId, boolean admin);
 
     WeeklyResourceReportResponse getWeeklyReport(Long id);
 
