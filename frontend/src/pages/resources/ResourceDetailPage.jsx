@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Image,
   Link2,
+  Share2,
   Pencil,
   Trash2,
   ArrowLeft,
@@ -274,6 +275,26 @@ export default function ResourceDetailPage() {
     }
   };
 
+  const handleShareBookingLink = async () => {
+    const shareUrl = `${window.location.origin}/bookings/create?resourceId=${resource.id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Book ${resource.name}`,
+          text: `Use this link to book ${resource.name}.`,
+          url: shareUrl,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Booking link copied to clipboard');
+    } catch {
+      toast.error('Unable to share the booking link right now');
+    }
+  };
+
   const handleBlackoutInputChange = (key, value) => {
     setBlackoutForm((current) => ({ ...current, [key]: value }));
   };
@@ -461,6 +482,15 @@ export default function ResourceDetailPage() {
             <Sparkles className="h-4 w-4" />
             Ask AI
           </Link>
+          {!isTechnician && (
+            <button
+              onClick={handleShareBookingLink}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              <Share2 className="h-4 w-4" />
+              Share booking link
+            </button>
+          )}
           {!isTechnician && (
             <Link
               to={`/bookings/create?resourceId=${resource.id}`}
