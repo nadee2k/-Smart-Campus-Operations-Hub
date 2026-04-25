@@ -12,10 +12,14 @@ import com.smartcampus.booking.repository.BookingRepository;
 import com.smartcampus.common.exception.BadRequestException;
 import com.smartcampus.common.exception.ConflictException;
 import com.smartcampus.common.exception.ResourceNotFoundException;
+import com.smartcampus.notification.service.EmailService;
 import com.smartcampus.notification.service.NotificationService;
 import com.smartcampus.resource.entity.CampusResource;
+import com.smartcampus.resource.entity.ResourceBlackout;
+import com.smartcampus.resource.entity.ResourceStatus;
 import com.smartcampus.resource.entity.ResourceType;
 import com.smartcampus.resource.repository.CampusResourceRepository;
+import com.smartcampus.resource.repository.ResourceBlackoutRepository;
 import com.smartcampus.resource.service.ResourceWatchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +29,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -40,8 +45,10 @@ class BookingServiceTest {
 
     @Mock private BookingRepository bookingRepository;
     @Mock private CampusResourceRepository resourceRepository;
+    @Mock private ResourceBlackoutRepository blackoutRepository;
     @Mock private UserService userService;
     @Mock private NotificationService notificationService;
+    @Mock private EmailService emailService;
     @Mock private ResourceWatchService resourceWatchService;
     @Mock private ActivityLogService activityLogService;
 
@@ -63,6 +70,10 @@ class BookingServiceTest {
         resource.setId(1L);
         resource.setName("Lab Room 1");
         resource.setType(ResourceType.LAB);
+        resource.setCapacity(10);
+        resource.setAvailabilityStartTime(LocalTime.of(8, 0));
+        resource.setAvailabilityEndTime(LocalTime.of(18, 0));
+        resource.setStatus(ResourceStatus.ACTIVE);
         resource.setDeleted(false);
 
         booking = new Booking();
@@ -88,6 +99,7 @@ class BookingServiceTest {
     void create_shouldCreateBooking() {
         when(resourceRepository.findById(1L)).thenReturn(Optional.of(resource));
         when(bookingRepository.findConflicting(anyLong(), any(), any())).thenReturn(Collections.emptyList());
+        when(blackoutRepository.findOverlapping(anyLong(), any(), any())).thenReturn(Collections.emptyList());
         when(userService.findById(1L)).thenReturn(user);
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
 
@@ -128,6 +140,65 @@ class BookingServiceTest {
     }
 
     @Test
+    void create_shouldThrowWhenBlackoutConflicts() {
+        ResourceBlackout blackout = new ResourceBlackout();
+        blackout.setId(11L);
+        blackout.setTitle("Maintenance window");
+        blackout.setStartTime(request.getStartTime().minusMinutes(30));
+        blackout.setEndTime(request.getEndTime().plusMinutes(30));
+
+        when(resourceRepository.findById(1L)).thenReturn(Optional.of(resource));
+        when(bookingRepository.findConflicting(anyLong(), any(), any())).thenReturn(Collections.emptyList());
+        when(blackoutRepository.findOverlapping(anyLong(), any(), any())).thenReturn(List.of(blackout));
+
+        assertThatThrownBy(() -> service.create(request, 1L))
+                .isInstanceOf(com.smartcampus.common.exception.ConflictException.class)
+                .hasMessageContaining("blocked blackout period");
+    }
+
+    @Test
+    void create_shouldRejectOutOfServiceResource() {
+        resource.setStatus(ResourceStatus.OUT_OF_SERVICE);
+        when(resourceRepository.findById(1L)).thenReturn(Optional.of(resource));
+
+        assertThatThrownBy(() -> service.create(request, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("out of service");
+    }
+
+    @Test
+    void create_shouldRejectAttendeesAboveCapacity() {
+        request.setExpectedAttendees(11);
+        when(resourceRepository.findById(1L)).thenReturn(Optional.of(resource));
+
+        assertThatThrownBy(() -> service.create(request, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("exceed the resource capacity");
+    }
+
+    @Test
+    void create_shouldRejectBookingOutsideAvailabilityWindow() {
+        request.setStartTime(LocalDateTime.now().plusDays(1).withHour(7).withMinute(30));
+        request.setEndTime(LocalDateTime.now().plusDays(1).withHour(9).withMinute(0));
+        when(resourceRepository.findById(1L)).thenReturn(Optional.of(resource));
+
+        assertThatThrownBy(() -> service.create(request, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("outside the resource availability window");
+    }
+
+    @Test
+    void create_shouldRejectMultiDayBookings() {
+        request.setStartTime(LocalDateTime.now().plusDays(1).withHour(17).withMinute(0));
+        request.setEndTime(request.getStartTime().plusHours(16));
+        when(resourceRepository.findById(1L)).thenReturn(Optional.of(resource));
+
+        assertThatThrownBy(() -> service.create(request, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("same day");
+    }
+
+    @Test
     void approve_shouldChangeStatusToApproved() {
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
@@ -136,6 +207,7 @@ class BookingServiceTest {
 
         verify(notificationService).sendNotification(
                 anyLong(), eq("BOOKING_APPROVED"), any(), eq("BOOKING"), eq(1L));
+        verify(emailService).sendBookingApprovedEmail(any(Booking.class));
     }
 
     @Test

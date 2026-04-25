@@ -15,6 +15,8 @@ public interface ResourceWatchRepository extends JpaRepository<ResourceWatch, Lo
 
     List<ResourceWatch> findByResourceId(Long resourceId);
 
+    List<ResourceWatch> findByUserIdOrderByCreatedAtDesc(Long userId);
+
     void deleteByResourceIdAndUserId(Long resourceId, Long userId);
 
     void deleteByResourceId(Long resourceId);

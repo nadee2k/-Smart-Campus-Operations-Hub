@@ -12,6 +12,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import ResourceListPage from './pages/resources/ResourceListPage';
 import ResourceDetailPage from './pages/resources/ResourceDetailPage';
 import ResourceFormPage from './pages/resources/ResourceFormPage';
+import ResourceWatchlistPage from './pages/resources/ResourceWatchlistPage';
 
 import BookingListPage from './pages/bookings/BookingListPage';
 import BookingCreatePage from './pages/bookings/BookingCreatePage';
@@ -26,6 +27,7 @@ import TicketDetailPage from './pages/tickets/TicketDetailPage';
 import NotificationPage from './pages/notifications/NotificationPage';
 import ProfilePage from './pages/profile/ProfilePage';
 import AnalyticsDashboardPage from './pages/analytics/AnalyticsDashboardPage';
+import ResourceAssistantPage from './pages/assistant/ResourceAssistantPage';
 
 import UserManagementPage from './pages/admin/UserManagementPage';
 import ActivityFeedPage from './pages/admin/ActivityFeedPage';
@@ -51,6 +53,7 @@ export default function App() {
 
               {/* Resources */}
               <Route path="/resources" element={<ResourceListPage />} />
+              <Route path="/resources/watchlist" element={<ProtectedRoute roles={['USER']}><ResourceWatchlistPage /></ProtectedRoute>} />
               <Route path="/resources/new" element={<ProtectedRoute roles={['ADMIN']}><ResourceFormPage /></ProtectedRoute>} />
               <Route path="/resources/:id" element={<ResourceDetailPage />} />
               <Route path="/resources/:id/edit" element={<ProtectedRoute roles={['ADMIN']}><ResourceFormPage /></ProtectedRoute>} />
@@ -69,6 +72,9 @@ export default function App() {
 
               {/* Notifications */}
               <Route path="/notifications" element={<NotificationPage />} />
+
+              {/* AI Assistant */}
+              <Route path="/assistant/resource" element={<ProtectedRoute roles={['USER', 'ADMIN', 'TECHNICIAN']}><ResourceAssistantPage /></ProtectedRoute>} />
 
               {/* Profile */}
               <Route path="/profile" element={<ProfilePage />} />

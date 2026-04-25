@@ -32,6 +32,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     long countByResourceIdAndStatusInAndStartTimeBetween(Long resourceId, List<BookingStatus> statuses, LocalDateTime start, LocalDateTime end);
 
+    long countByResourceIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(
+            Long resourceId,
+            List<BookingStatus> statuses,
+            LocalDateTime endTime,
+            LocalDateTime startTime
+    );
+
     long countByUserId(Long userId);
 
     @Query(value = "SELECT COUNT(*) FROM bookings WHERE user_id = :userId AND status = 'APPROVED'",

@@ -24,6 +24,8 @@ public class ResourceRequest {
 
     private String location;
 
+    private String description;
+
     private List<String> amenities;
 
     private List<String> photoUrls;
@@ -54,6 +56,8 @@ public class ResourceRequest {
     public void setCapacity(Integer capacity) { this.capacity = capacity; }
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
     public List<String> getAmenities() { return amenities; }
     public void setAmenities(List<String> amenities) { this.amenities = amenities; }
     public List<String> getPhotoUrls() { return photoUrls; }

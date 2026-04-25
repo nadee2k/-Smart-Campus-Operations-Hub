@@ -5,6 +5,7 @@ import com.smartcampus.auth.entity.User;
 import com.smartcampus.auth.service.UserService;
 import com.smartcampus.booking.entity.Booking;
 import com.smartcampus.booking.entity.BookingStatus;
+import com.smartcampus.booking.repository.BookingRepository;
 import com.smartcampus.notification.service.NotificationService;
 import com.smartcampus.resource.dto.ResourceWatchStatusResponse;
 import com.smartcampus.resource.entity.CampusResource;
@@ -37,6 +38,9 @@ class ResourceWatchServiceTest {
 
     @Mock
     private CampusResourceRepository resourceRepository;
+
+    @Mock
+    private BookingRepository bookingRepository;
 
     @Mock
     private UserService userService;
@@ -78,6 +82,22 @@ class ResourceWatchServiceTest {
     }
 
     @Test
+    void getMyWatchlist_shouldReturnWatchedResources() {
+        ResourceWatch watch = createWatch(resource, user);
+        watch.setCreatedAt(LocalDateTime.of(2026, 4, 24, 10, 0));
+        resource.setCapacity(16);
+        resource.setDescription("Flexible collaboration room.");
+        when(resourceWatchRepository.findByUserIdOrderByCreatedAtDesc(5L)).thenReturn(List.of(watch));
+        when(resourceWatchRepository.countByResourceId(10L)).thenReturn(3L);
+
+        var result = service.getMyWatchlist(5L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).resourceName()).isEqualTo("Innovation Hub");
+        assertThat(result.get(0).watcherCount()).isEqualTo(3L);
+    }
+
+    @Test
     void notifyWatchersResourceAvailable_shouldSendNotificationsAndClearWatches() {
         when(resourceWatchRepository.findByResourceId(10L)).thenReturn(List.of(createWatch(resource, user)));
 
@@ -92,8 +112,38 @@ class ResourceWatchServiceTest {
 
         verify(notificationService).sendNotification(
                 eq(5L),
+                eq("RESOURCE_AVAILABILITY_ALERT"),
+                org.mockito.ArgumentMatchers.contains("booking was cancelled"),
+                eq("RESOURCE"),
+                eq(10L)
+        );
+        verify(resourceWatchRepository).deleteByResourceId(10L);
+    }
+
+    @Test
+    void notifyWatchersResourceAvailable_shouldIgnoreRejectedBookings() {
+        Booking booking = new Booking();
+        booking.setResource(resource);
+        booking.setStatus(BookingStatus.REJECTED);
+
+        service.notifyWatchersResourceAvailable(booking);
+
+        verify(notificationService, org.mockito.Mockito.never()).sendNotification(any(), any(), any(), any(), any());
+        verify(resourceWatchRepository, org.mockito.Mockito.never()).deleteByResourceId(any());
+    }
+
+    @Test
+    void processScheduledAvailabilityAlerts_shouldNotifyAndClearWhenCurrentlyFree() {
+        when(resourceWatchRepository.findAll()).thenReturn(List.of(createWatch(resource, user)));
+        when(bookingRepository.countByResourceIdAndStatusInAndStartTimeLessThanAndEndTimeGreaterThan(eq(10L), any(), any(), any()))
+                .thenReturn(0L);
+
+        service.processScheduledAvailabilityAlerts();
+
+        verify(notificationService).sendNotification(
+                eq(5L),
                 eq("RESOURCE_AVAILABLE"),
-                org.mockito.ArgumentMatchers.contains("Innovation Hub"),
+                org.mockito.ArgumentMatchers.contains("currently free"),
                 eq("RESOURCE"),
                 eq(10L)
         );

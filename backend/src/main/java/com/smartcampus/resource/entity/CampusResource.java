@@ -31,6 +31,9 @@ public class CampusResource {
 
     private String location;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @ElementCollection
     @CollectionTable(name = "resource_amenities", joinColumns = @JoinColumn(name = "resource_id"))
     @Column(name = "amenity", nullable = false)
@@ -88,6 +91,8 @@ public class CampusResource {
     public void setCapacity(Integer capacity) { this.capacity = capacity; }
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
     public List<String> getAmenities() { return amenities; }
     public void setAmenities(List<String> amenities) { this.amenities = amenities; }
     public List<String> getPhotoUrls() { return photoUrls; }

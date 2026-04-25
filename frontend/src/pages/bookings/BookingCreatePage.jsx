@@ -479,7 +479,7 @@ export default function BookingCreatePage() {
       })
       .catch((err) => {
         if (err.response?.status === 409) {
-          toast.error('Time slot conflicts with an existing booking');
+          toast.error(err.response?.data?.message || 'This time slot is not available');
           fetchSuggestions(form.resourceId, form.startTime, form.endTime);
         } else {
           const d = err.response?.data;
