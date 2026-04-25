@@ -193,10 +193,10 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                 .findFirst()
                 .map(resource -> String.format(
                         Locale.US,
-                        "Selected resource: %s (%s), capacity %d, status %s, location %s, availability %s-%s.",
+                        "Selected resource: %s (%s), capacity %s, status %s, location %s, availability %s-%s.",
                         resource.name(),
                         resource.type(),
-                        resource.capacity(),
+                        safeNumber(resource.capacity()),
                         resource.status(),
                         safe(resource.location()),
                         safe(resource.availabilityStartTime()),
@@ -210,10 +210,10 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
                 : suggestions.stream()
                 .map(suggestion -> String.format(
                         Locale.US,
-                        "- %s | %s | capacity %d | %s | %s | booking link %s",
+                        "- %s | %s | capacity %s | %s | %s | booking link %s",
                         suggestion.name(),
                         suggestion.type(),
-                        suggestion.capacity(),
+                        safeNumber(suggestion.capacity()),
                         suggestion.status(),
                         suggestion.reason(),
                         suggestion.bookingUrl()
@@ -597,6 +597,10 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
     }
 
     private String safe(Object value) {
+        return value == null ? "-" : value.toString();
+    }
+
+    private String safeNumber(Number value) {
         return value == null ? "-" : value.toString();
     }
 
