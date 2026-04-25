@@ -113,11 +113,13 @@ public class ResourceController {
     }
 
     @GetMapping("/{id}/weekly-report")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN')")
     public ResponseEntity<WeeklyResourceReportResponse> getWeeklyReport(@PathVariable Long id) {
         return ResponseEntity.ok(resourceService.getWeeklyReport(id));
     }
 
     @GetMapping("/{id}/weekly-report.pdf")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN')")
     public ResponseEntity<byte[]> downloadWeeklyReportPdf(@PathVariable Long id) {
         WeeklyResourceReportResponse report = resourceService.getWeeklyReport(id);
         byte[] pdf = resourceService.generateWeeklyReportPdf(id);

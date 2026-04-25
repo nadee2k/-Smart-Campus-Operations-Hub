@@ -136,6 +136,7 @@ export default function ResourceDetailPage() {
     startTime: '',
     endTime: '',
   });
+  const canViewWeeklyReport = isAdmin || isTechnician;
 
   useEffect(() => {
     setLoading(true);
@@ -150,12 +151,17 @@ export default function ResourceDetailPage() {
       .then((res) => setWorkHistory(res.data.content ?? []))
       .catch(() => {});
 
-    setReportLoading(true);
-    resourceService
-      .getWeeklyReport(id)
-      .then((res) => setWeeklyReport(res.data))
-      .catch(() => setWeeklyReport(null))
-      .finally(() => setReportLoading(false));
+    if (canViewWeeklyReport) {
+      setReportLoading(true);
+      resourceService
+        .getWeeklyReport(id)
+        .then((res) => setWeeklyReport(res.data))
+        .catch(() => setWeeklyReport(null))
+        .finally(() => setReportLoading(false));
+    } else {
+      setWeeklyReport(null);
+      setReportLoading(false);
+    }
 
     setWatchLoading(true);
     resourceService
@@ -177,7 +183,7 @@ export default function ResourceDetailPage() {
       .then((res) => setReviews(res.data ?? []))
       .catch(() => setReviews([]))
       .finally(() => setReviewsLoading(false));
-  }, [id]);
+  }, [id, canViewWeeklyReport]);
 
   useEffect(() => {
     if (!user) {
@@ -929,81 +935,83 @@ export default function ResourceDetailPage() {
         </div>
       </div>
 
-      <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10">
-              <FileText className="h-5 w-5 text-blue-700 dark:text-blue-300" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Weekly Resource Report Card</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Auto-generated summary for {weeklyReport ? `${formatDate(weeklyReport.weekStart)} to ${formatDate(weeklyReport.weekEnd)}` : 'this week'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleDownloadWeeklyReport}
-            disabled={reportDownloading || !weeklyReport}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            {reportDownloading ? 'Preparing PDF...' : 'Download PDF'}
-          </button>
-        </div>
-
-        {reportLoading ? (
-          <div className="mt-6">
-            <LoadingSpinner />
-          </div>
-        ) : weeklyReport ? (
-          <>
-            <p className="mt-5 text-sm leading-6 text-gray-600 dark:text-gray-300">
-              {weeklyReport.operationalSummary}
-            </p>
-
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              {[
-                { label: 'Bookings', value: weeklyReport.totalBookings, subtext: `${weeklyReport.approvedBookings} approved` },
-                { label: 'Reserved Hours', value: weeklyReport.totalReservedHours, subtext: `${weeklyReport.averageAttendees} avg attendees` },
-                { label: 'Check-ins', value: `${weeklyReport.checkInRate}%`, subtext: `${weeklyReport.checkedInBookings} completed` },
-                { label: 'Tickets', value: weeklyReport.ticketsOpened, subtext: `${weeklyReport.ticketsResolved} resolved this week` },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 p-4"
-                >
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.label}</p>
-                  <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{item.value}</p>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.subtext}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Peak day</p>
-                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestDay}</p>
+      {canViewWeeklyReport && (
+        <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10">
+                <FileText className="h-5 w-5 text-blue-700 dark:text-blue-300" />
               </div>
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Peak time</p>
-                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestTimeRange}</p>
-              </div>
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Utilization band</p>
-                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.utilizationBand}</p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {weeklyReport.openTickets} active maintenance ticket{weeklyReport.openTickets !== 1 ? 's' : ''}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Weekly Resource Report Card</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Auto-generated summary for {weeklyReport ? `${formatDate(weeklyReport.weekStart)} to ${formatDate(weeklyReport.weekEnd)}` : 'this week'}
                 </p>
               </div>
             </div>
-          </>
-        ) : (
-          <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
-            Weekly report data is unavailable right now.
-          </p>
-        )}
-      </div>
+            <button
+              onClick={handleDownloadWeeklyReport}
+              disabled={reportDownloading || !weeklyReport}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              {reportDownloading ? 'Preparing PDF...' : 'Download PDF'}
+            </button>
+          </div>
+
+          {reportLoading ? (
+            <div className="mt-6">
+              <LoadingSpinner />
+            </div>
+          ) : weeklyReport ? (
+            <>
+              <p className="mt-5 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                {weeklyReport.operationalSummary}
+              </p>
+
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                {[
+                  { label: 'Bookings', value: weeklyReport.totalBookings, subtext: `${weeklyReport.approvedBookings} approved` },
+                  { label: 'Reserved Hours', value: weeklyReport.totalReservedHours, subtext: `${weeklyReport.averageAttendees} avg attendees` },
+                  { label: 'Check-ins', value: `${weeklyReport.checkInRate}%`, subtext: `${weeklyReport.checkedInBookings} completed` },
+                  { label: 'Tickets', value: weeklyReport.ticketsOpened, subtext: `${weeklyReport.ticketsResolved} resolved this week` },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 p-4"
+                  >
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{item.label}</p>
+                    <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{item.value}</p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.subtext}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Peak day</p>
+                  <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestDay}</p>
+                </div>
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Peak time</p>
+                  <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestTimeRange}</p>
+                </div>
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Utilization band</p>
+                  <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.utilizationBand}</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {weeklyReport.openTickets} active maintenance ticket{weeklyReport.openTickets !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+              Weekly report data is unavailable right now.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         <button
