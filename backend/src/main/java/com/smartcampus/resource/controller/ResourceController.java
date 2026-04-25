@@ -92,21 +92,25 @@ public class ResourceController {
     }
 
     @GetMapping("/watchlist/my")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<List<ResourceWatchListItemResponse>> getMyWatchlist() {
         return ResponseEntity.ok(resourceWatchService.getMyWatchlist(AuthUtil.getCurrentUserId()));
     }
 
     @GetMapping("/{id}/watch-status")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<ResourceWatchStatusResponse> getWatchStatus(@PathVariable Long id) {
         return ResponseEntity.ok(resourceWatchService.getStatus(id, AuthUtil.getCurrentUserId()));
     }
 
     @PostMapping("/{id}/watch")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<ResourceWatchStatusResponse> watch(@PathVariable Long id) {
         return ResponseEntity.ok(resourceWatchService.watch(id, AuthUtil.getCurrentUserId()));
     }
 
     @DeleteMapping("/{id}/watch")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<Void> unwatch(@PathVariable Long id) {
         resourceWatchService.unwatch(id, AuthUtil.getCurrentUserId());
         return ResponseEntity.noContent().build();

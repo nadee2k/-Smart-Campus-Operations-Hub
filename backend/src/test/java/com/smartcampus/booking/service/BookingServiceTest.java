@@ -12,6 +12,7 @@ import com.smartcampus.booking.repository.BookingRepository;
 import com.smartcampus.common.exception.BadRequestException;
 import com.smartcampus.common.exception.ConflictException;
 import com.smartcampus.common.exception.ResourceNotFoundException;
+import com.smartcampus.notification.service.EmailService;
 import com.smartcampus.notification.service.NotificationService;
 import com.smartcampus.resource.entity.CampusResource;
 import com.smartcampus.resource.entity.ResourceBlackout;
@@ -47,6 +48,7 @@ class BookingServiceTest {
     @Mock private ResourceBlackoutRepository blackoutRepository;
     @Mock private UserService userService;
     @Mock private NotificationService notificationService;
+    @Mock private EmailService emailService;
     @Mock private ResourceWatchService resourceWatchService;
     @Mock private ActivityLogService activityLogService;
 
@@ -205,6 +207,7 @@ class BookingServiceTest {
 
         verify(notificationService).sendNotification(
                 anyLong(), eq("BOOKING_APPROVED"), any(), eq("BOOKING"), eq(1L));
+        verify(emailService).sendBookingApprovedEmail(any(Booking.class));
     }
 
     @Test

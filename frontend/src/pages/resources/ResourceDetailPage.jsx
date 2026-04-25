@@ -106,6 +106,7 @@ export default function ResourceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAdmin, isTechnician } = useAuth();
+  const isUser = !!user && !isAdmin && !isTechnician;
   const [resource, setResource] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -163,12 +164,17 @@ export default function ResourceDetailPage() {
       setReportLoading(false);
     }
 
-    setWatchLoading(true);
-    resourceService
-      .getWatchStatus(id)
-      .then((res) => setWatchStatus(res.data))
-      .catch(() => setWatchStatus(null))
-      .finally(() => setWatchLoading(false));
+    if (isUser) {
+      setWatchLoading(true);
+      resourceService
+        .getWatchStatus(id)
+        .then((res) => setWatchStatus(res.data))
+        .catch(() => setWatchStatus(null))
+        .finally(() => setWatchLoading(false));
+    } else {
+      setWatchStatus(null);
+      setWatchLoading(false);
+    }
 
     setBlackoutsLoading(true);
     resourceService
@@ -183,7 +189,7 @@ export default function ResourceDetailPage() {
       .then((res) => setReviews(res.data ?? []))
       .catch(() => setReviews([]))
       .finally(() => setReviewsLoading(false));
-  }, [id, canViewWeeklyReport]);
+  }, [id, canViewWeeklyReport, isUser]);
 
   useEffect(() => {
     if (!user) {
@@ -427,7 +433,7 @@ export default function ResourceDetailPage() {
           Back to Resources
         </Link>
         <div className="flex flex-wrap gap-2">
-          {!isTechnician && user && (
+          {isUser && (
             <button
               onClick={handleToggleWatch}
               disabled={watchLoading || watchSaving}
@@ -505,7 +511,7 @@ export default function ResourceDetailPage() {
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{resource.name}</h1>
-            {!isTechnician && (
+            {isUser && (
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 {watchLoading
                   ? 'Loading watchlist status...'

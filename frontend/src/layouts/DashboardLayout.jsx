@@ -25,7 +25,7 @@ export default function DashboardLayout() {
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: true },
     { to: '/technician/workspace', label: 'My Workspace', icon: ClipboardList, show: isTechnician },
     { to: '/resources', label: 'Resources', icon: Building2, show: true },
-    { to: '/resources/watchlist', label: 'Watchlist', icon: BellRing, show: true },
+    { to: '/resources/watchlist', label: 'Watchlist', icon: BellRing, show: isUser },
     { to: '/assistant/resource', label: 'AI Assistant', icon: Sparkles, show: true },
     { to: isAdmin ? '/bookings/admin' : '/bookings', label: 'Bookings', icon: CalendarDays, show: isAdmin || isUser },
     { to: '/bookings/calendar', label: 'Calendar', icon: Calendar, show: isUser },

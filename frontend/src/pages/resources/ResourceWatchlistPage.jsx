@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -12,11 +13,18 @@ import {
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
 import { resourceService } from '../../services/resourceService';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ResourceWatchlistPage() {
+  const { user, isAdmin, isTechnician } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unwatching, setUnwatching] = useState({});
+  const isUser = !!user && !isAdmin && !isTechnician;
+
+  if (!isUser) {
+    return <Navigate to="/resources" replace />;
+  }
 
   useEffect(() => {
     resourceService

@@ -11,6 +11,7 @@ import com.smartcampus.booking.repository.BookingRepository;
 import com.smartcampus.common.exception.BadRequestException;
 import com.smartcampus.common.exception.ConflictException;
 import com.smartcampus.common.exception.ResourceNotFoundException;
+import com.smartcampus.notification.service.EmailService;
 import com.smartcampus.notification.service.NotificationService;
 import com.smartcampus.resource.entity.CampusResource;
 import com.smartcampus.resource.entity.ResourceBlackout;
@@ -37,6 +38,7 @@ public class BookingServiceImpl implements BookingService {
     private final ResourceBlackoutRepository blackoutRepository;
     private final UserService userService;
     private final NotificationService notificationService;
+    private final EmailService emailService;
     private final ResourceWatchService resourceWatchService;
     private final ActivityLogService activityLogService;
 
@@ -45,6 +47,7 @@ public class BookingServiceImpl implements BookingService {
                               ResourceBlackoutRepository blackoutRepository,
                               UserService userService,
                               NotificationService notificationService,
+                              EmailService emailService,
                               ResourceWatchService resourceWatchService,
                               ActivityLogService activityLogService) {
         this.bookingRepository = bookingRepository;
@@ -52,6 +55,7 @@ public class BookingServiceImpl implements BookingService {
         this.blackoutRepository = blackoutRepository;
         this.userService = userService;
         this.notificationService = notificationService;
+        this.emailService = emailService;
         this.resourceWatchService = resourceWatchService;
         this.activityLogService = activityLogService;
     }
@@ -147,6 +151,7 @@ public class BookingServiceImpl implements BookingService {
                 "BOOKING_APPROVED",
                 "Your booking for " + booking.getResource().getName() + " has been approved.",
                 "BOOKING", booking.getId());
+        emailService.sendBookingApprovedEmail(saved);
 
         return toResponse(saved);
     }

@@ -600,29 +600,25 @@ public class ResourceAssistantServiceImpl implements ResourceAssistantService {
         return value == null ? "-" : value.toString();
     }
 
-        private ResourceResponse toResourceResponse(com.smartcampus.resource.entity.CampusResource resource) {
-        Long createdById = resource.getCreatedBy() != null
-                ? resource.getCreatedBy().getId()
-                : null;
-
+    private ResourceResponse toResourceResponse(com.smartcampus.resource.entity.CampusResource resource) {
         return new ResourceResponse(
                 resource.getId(),
                 resource.getName(),
                 resource.getType(),
                 resource.getCapacity(),
                 resource.getLocation(),
-                resource.getBuilding(),
-                resource.getEquipment(),
-                resource.getFeatures(),
                 resource.getDescription(),
-                resource.getImageUrl(),
+                resource.getAmenities(),
+                resource.getPhotoUrls(),
+                resource.getLayoutMapUrl(),
+                resource.getView360Url(),
+                resource.getOwnerName(),
                 resource.getDepartment(),
-                resource.getContactPerson(),
-                resource.getFloor(),
-                resource.getRating(),
-                createdById,
-                resource.getAvailableFrom(),
-                resource.getAvailableTo(),
+                resource.getMaintenanceScore(),
+                null,
+                0L,
+                resource.getAvailabilityStartTime(),
+                resource.getAvailabilityEndTime(),
                 resource.getStatus(),
                 resource.getCreatedAt(),
                 resource.getUpdatedAt()
