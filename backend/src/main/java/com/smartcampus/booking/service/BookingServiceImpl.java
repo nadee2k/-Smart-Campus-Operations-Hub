@@ -14,6 +14,7 @@ import com.smartcampus.common.exception.ResourceNotFoundException;
 import com.smartcampus.notification.service.NotificationService;
 import com.smartcampus.resource.entity.CampusResource;
 import com.smartcampus.resource.entity.ResourceBlackout;
+import com.smartcampus.resource.entity.ResourceStatus;
 import com.smartcampus.resource.repository.CampusResourceRepository;
 import com.smartcampus.resource.repository.ResourceBlackoutRepository;
 import com.smartcampus.resource.service.ResourceWatchService;
@@ -69,6 +70,7 @@ public class BookingServiceImpl implements BookingService {
         if (resource.getDeleted()) {
             throw new ResourceNotFoundException("Resource", request.getResourceId());
         }
+        validateBookingRules(resource, request);
 
         List<Booking> conflicts = bookingRepository.findConflicting(
                 resource.getId(), request.getStartTime(), request.getEndTime());
@@ -225,6 +227,12 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Resource", resourceId));
         if (resource.getDeleted()) {
             throw new ResourceNotFoundException("Resource", resourceId);
+        }
+        if (resource.getStatus() != ResourceStatus.ACTIVE) {
+            throw new BadRequestException("Suggestions are only available for active resources");
+        }
+        if (durationMinutes <= 0) {
+            throw new BadRequestException("Duration must be greater than 0 minutes");
         }
         
         // Collect all available slots across next 3 days
@@ -483,6 +491,30 @@ public class BookingServiceImpl implements BookingService {
         if (!valid) {
             throw new BadRequestException(
                     "Cannot transition from " + current + " to " + target);
+        }
+    }
+
+    private void validateBookingRules(CampusResource resource, BookingRequest request) {
+        if (resource.getStatus() != ResourceStatus.ACTIVE) {
+            throw new BadRequestException("This resource is currently out of service and cannot be booked");
+        }
+
+        if (request.getExpectedAttendees() != null
+                && resource.getCapacity() != null
+                && request.getExpectedAttendees() > resource.getCapacity()) {
+            throw new BadRequestException("Expected attendees exceed the resource capacity");
+        }
+
+        if (!request.getStartTime().toLocalDate().equals(request.getEndTime().toLocalDate())) {
+            throw new BadRequestException("Bookings must start and end on the same day");
+        }
+
+        if (resource.getAvailabilityStartTime() != null && request.getStartTime().toLocalTime().isBefore(resource.getAvailabilityStartTime())) {
+            throw new BadRequestException("Booking start time is outside the resource availability window");
+        }
+
+        if (resource.getAvailabilityEndTime() != null && request.getEndTime().toLocalTime().isAfter(resource.getAvailabilityEndTime())) {
+            throw new BadRequestException("Booking end time is outside the resource availability window");
         }
     }
 
