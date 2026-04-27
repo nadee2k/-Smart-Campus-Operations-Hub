@@ -1,60 +1,69 @@
 # Smart Campus Operations Hub
 
-A full-stack web application for managing campus facilities, bookings, maintenance tickets, and notifications.
+Smart Campus Operations Hub is a full-stack campus operations management system built for booking facilities, handling incident tickets, managing resources, and delivering admin analytics.
 
-**Course:** IT3030 – Programming Applications and Frameworks
+## Project Overview
+
+The application supports:
+- Facilities catalogue and resource management
+- Booking workflows with conflict detection and approval handling
+- Incident ticketing with attachments, technician updates, and QR code access
+- Role-based notifications, admin dashboards, and improved OAuth authentication
+
+## Team Contributions
+
+| Member    | GitHub | Responsibilities |
+|-----------|--------|------------------|
+| Ayyash    | [@YehyaAyyash](https://github.com/YehyaAyyash) | Facilities catalogue + resource management endpoints |
+| Nipun     | [@NipunDemintha](https://github.com/NipunDemintha) | Booking workflow + conflict checking |
+| Yasiru    | [@diw-666](https://github.com/diw-666) | Incident tickets + attachments + technician updates + QR code |
+| Dhanajana | [@nadee2k](https://github.com/nadee2k) | Notifications + role management + OAuth integration improvement + Admin Analytics |
 
 ## Tech Stack
 
-| Layer      | Technology                          |
-|------------|-------------------------------------|
-| Backend    | Spring Boot 3.2, Java 17, Maven    |
-| Frontend   | React 18, Vite, Tailwind CSS       |
-| Database   | PostgreSQL                          |
-| Auth       | OAuth 2.0 (Google) + JWT            |
-| CI/CD      | GitHub Actions                      |
+- Backend: Spring Boot 3.2, Java, Maven
+- Frontend: React, Vite, Tailwind CSS
+- Database: PostgreSQL
+- Authentication: OAuth 2.0 + JWT
 
-## Project Structure
+## Repository Layout
 
-```
-paf/
-├── backend/          Spring Boot REST API
-├── frontend/         React client application
-├── docs/             Documentation and report
-├── postman/          Postman collection
-└── .github/          CI/CD workflows
-```
+- `backend/` — Spring Boot REST API and database migrations
+- `frontend/` — React client application
+- `docs/` — project documentation and report
+- `postman/` — API collection for testing
 
-## Prerequisites
+## Setup Instructions
 
-- Java 17+
+### 1. Prerequisites
+
+- Java 17+ (or compatible JDK)
 - Node.js 20+
-- PostgreSQL 15+
-- Google OAuth 2.0 credentials
+- PostgreSQL
+- Google OAuth credentials for authentication
 
-## Getting Started
+### 2. Configure the Database
 
-### 1. Database Setup
+Create the PostgreSQL database used by the backend:
 
 ```bash
 createdb smartcampus
 ```
 
-### 2. Backend
+### 3. Run the Backend
+
+From `backend/`:
 
 ```bash
 cd backend
-# Set environment variables
-export GOOGLE_CLIENT_ID=your-google-client-id
-export GOOGLE_CLIENT_SECRET=your-google-client-secret
-export JWT_SECRET=your-256-bit-secret-key
-
 mvn spring-boot:run
 ```
 
-The API starts at `http://localhost:8080`.
+The backend API starts at `http://localhost:8080`.
 
-### 3. Frontend
+### 4. Run the Frontend
+
+From `frontend/`:
 
 ```bash
 cd frontend
@@ -62,40 +71,20 @@ npm install
 npm run dev
 ```
 
-The client starts at `http://localhost:5173`.
+The frontend runs at `http://localhost:5173`.
 
-## Business Modules
+## Key Modules
 
-| Module        | Description                              |
-|---------------|------------------------------------------|
-| Resources     | Campus facilities & assets catalogue     |
-| Bookings      | Room/equipment booking with approvals    |
-| Tickets       | Maintenance & incident ticketing system  |
-| Notifications | In-app notification system               |
-| Analytics     | Admin dashboard with charts & metrics    |
+- `Resources` — facility catalogue, asset registration, availability, and resource management APIs
+- `Bookings` — booking creation, approval flow, and conflict checking logic
+- `Tickets` — incident ticket creation, uploads, technician updates, and QR code scanning workflows
+- `Notifications` — role-aware alerts, notification feeds, and admin notifications
+- `Analytics` — admin dashboards with usage summaries and key campus metrics
 
-## API Documentation
+## Notes
 
-Swagger UI available at `http://localhost:8080/swagger-ui.html` when the backend is running.
+- Backend migrations are located under `backend/src/main/resources/db/migration`
+- Frontend pages live under `frontend/src/pages`
+- OAuth and security config is managed through backend environment variables and Spring Security
 
-See [Endpoint Reference](docs/report.md#4-rest-api-endpoint-design) for the full endpoint list.
 
-## Team Contributions
-
-| Member   | Module               | Backend Package              | Frontend Pages           |
-|----------|----------------------|------------------------------|--------------------------|
-| Member 1 | Resources            | `com.smartcampus.resource`   | `pages/resources/`       |
-| Member 2 | Bookings             | `com.smartcampus.booking`    | `pages/bookings/`        |
-| Member 3 | Tickets              | `com.smartcampus.ticket`     | `pages/tickets/`         |
-| Member 4 | Auth + Notifications | `com.smartcampus.auth`, `com.smartcampus.notification` | `pages/notifications/`, `context/` |
-
-## Git Strategy
-
-- `main` — stable releases
-- `develop` — integration branch
-- `feature/*` — per-feature branches
-- Commit prefixes: `feat:`, `fix:`, `docs:`, `test:`, `chore:`
-
-## License
-
-This project is for academic purposes only.

@@ -13,7 +13,7 @@ public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
-    
+
     @Value("${spring.mail.username:no-reply@smartcampus.local}")
     private String fromEmail;
 

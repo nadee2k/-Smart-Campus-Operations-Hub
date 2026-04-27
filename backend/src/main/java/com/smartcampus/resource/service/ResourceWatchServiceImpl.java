@@ -110,7 +110,7 @@ public class ResourceWatchServiceImpl implements ResourceWatchService {
         if (booking == null || booking.getResource() == null || booking.getResource().getId() == null) {
             return;
         }
-        if (booking.getStatus() != BookingStatus.CANCELLED && booking.getStatus() != BookingStatus.REJECTED) {
+        if (booking.getStatus() != BookingStatus.CANCELLED) {
             return;
         }
 
@@ -122,12 +122,12 @@ public class ResourceWatchServiceImpl implements ResourceWatchService {
 
         String start = booking.getStartTime() != null ? booking.getStartTime().format(WATCH_TIME_FORMAT) : "an upcoming time";
         String end = booking.getEndTime() != null ? booking.getEndTime().format(WATCH_TIME_FORMAT) : "later";
-        String message = booking.getResource().getName() + " may now be free from " + start + " to " + end + ".";
+        String message = booking.getResource().getName() + " now has an open slot from " + start + " to " + end + " because a booking was cancelled.";
 
         for (ResourceWatch watch : watches) {
             notificationService.sendNotification(
                     watch.getUser().getId(),
-                    "RESOURCE_AVAILABLE",
+                    "RESOURCE_AVAILABILITY_ALERT",
                     message,
                     "RESOURCE",
                     resourceId

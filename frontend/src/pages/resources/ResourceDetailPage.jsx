@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Image,
   Link2,
+  Share2,
   Pencil,
   Trash2,
   ArrowLeft,
@@ -29,6 +30,10 @@ import {
   BellRing,
   Power,
   Sparkles,
+  Ban,
+  Plus,
+  MessageSquare,
+  Star,
 } from 'lucide-react';
 
 function formatTime(val) {
@@ -72,10 +77,37 @@ function getMaintenanceTone(score = 100) {
   return 'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-500/10';
 }
 
+function StarRating({ value, onChange, readonly = false, size = 'md' }) {
+  const starSize = size === 'sm' ? 'h-4 w-4' : 'h-6 w-6';
+
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          disabled={readonly}
+          onClick={() => !readonly && onChange?.(star)}
+          className="disabled:cursor-default transition-transform hover:scale-105"
+        >
+          <Star
+            className={`${starSize} ${
+              star <= value
+                ? 'text-amber-400 fill-amber-400'
+                : 'text-gray-300 dark:text-gray-600'
+            }`}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function ResourceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAdmin, isTechnician } = useAuth();
+  const isUser = !!user && !isAdmin && !isTechnician;
   const [resource, setResource] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -88,6 +120,25 @@ export default function ResourceDetailPage() {
   const [watchLoading, setWatchLoading] = useState(true);
   const [watchSaving, setWatchSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [blackouts, setBlackouts] = useState([]);
+  const [blackoutsLoading, setBlackoutsLoading] = useState(true);
+  const [blackoutSaving, setBlackoutSaving] = useState(false);
+  const [removingBlackoutId, setRemovingBlackoutId] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [removingReviewId, setRemovingReviewId] = useState(null);
+  const [reviewForm, setReviewForm] = useState({
+    rating: 0,
+    comment: '',
+  });
+  const [blackoutForm, setBlackoutForm] = useState({
+    title: '',
+    reason: '',
+    startTime: '',
+    endTime: '',
+  });
+  const canViewWeeklyReport = isAdmin || isTechnician;
 
   useEffect(() => {
     setLoading(true);
@@ -102,20 +153,56 @@ export default function ResourceDetailPage() {
       .then((res) => setWorkHistory(res.data.content ?? []))
       .catch(() => {});
 
-    setReportLoading(true);
-    resourceService
-      .getWeeklyReport(id)
-      .then((res) => setWeeklyReport(res.data))
-      .catch(() => setWeeklyReport(null))
-      .finally(() => setReportLoading(false));
+    if (canViewWeeklyReport) {
+      setReportLoading(true);
+      resourceService
+        .getWeeklyReport(id)
+        .then((res) => setWeeklyReport(res.data))
+        .catch(() => setWeeklyReport(null))
+        .finally(() => setReportLoading(false));
+    } else {
+      setWeeklyReport(null);
+      setReportLoading(false);
+    }
 
-    setWatchLoading(true);
+    if (isUser) {
+      setWatchLoading(true);
+      resourceService
+        .getWatchStatus(id)
+        .then((res) => setWatchStatus(res.data))
+        .catch(() => setWatchStatus(null))
+        .finally(() => setWatchLoading(false));
+    } else {
+      setWatchStatus(null);
+      setWatchLoading(false);
+    }
+
+    setBlackoutsLoading(true);
     resourceService
-      .getWatchStatus(id)
-      .then((res) => setWatchStatus(res.data))
-      .catch(() => setWatchStatus(null))
-      .finally(() => setWatchLoading(false));
-  }, [id]);
+      .getBlackouts(id)
+      .then((res) => setBlackouts(res.data ?? []))
+      .catch(() => setBlackouts([]))
+      .finally(() => setBlackoutsLoading(false));
+
+    setReviewsLoading(true);
+    resourceService
+      .getReviews(id)
+      .then((res) => setReviews(res.data ?? []))
+      .catch(() => setReviews([]))
+      .finally(() => setReviewsLoading(false));
+  }, [id, canViewWeeklyReport, isUser]);
+
+  useEffect(() => {
+    if (!user) {
+      setReviewForm({ rating: 0, comment: '' });
+      return;
+    }
+    const existingReview = reviews.find((review) => review.userId === user.id);
+    setReviewForm({
+      rating: existingReview?.rating ?? 0,
+      comment: existingReview?.comment ?? '',
+    });
+  }, [reviews, user]);
 
   const handleDelete = () => {
     resourceService
@@ -188,6 +275,143 @@ export default function ResourceDetailPage() {
     }
   };
 
+  const handleShareBookingLink = async () => {
+    const shareUrl = `${window.location.origin}/bookings/create?resourceId=${resource.id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Book ${resource.name}`,
+          text: `Use this link to book ${resource.name}.`,
+          url: shareUrl,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Booking link copied to clipboard');
+    } catch {
+      toast.error('Unable to share the booking link right now');
+    }
+  };
+
+  const handleBlackoutInputChange = (key, value) => {
+    setBlackoutForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleCreateBlackout = async (event) => {
+    event.preventDefault();
+    try {
+      setBlackoutSaving(true);
+      const payload = {
+        title: blackoutForm.title.trim(),
+        reason: blackoutForm.reason.trim() || null,
+        startTime: blackoutForm.startTime ? `${blackoutForm.startTime}:00` : null,
+        endTime: blackoutForm.endTime ? `${blackoutForm.endTime}:00` : null,
+      };
+      const res = await resourceService.createBlackout(id, payload);
+      setBlackouts((current) => {
+        const next = [...current, res.data];
+        next.sort((left, right) => new Date(left.startTime) - new Date(right.startTime));
+        return next;
+      });
+      setBlackoutForm({
+        title: '',
+        reason: '',
+        startTime: '',
+        endTime: '',
+      });
+      toast.success('Blackout period added');
+    } catch {
+      // Toast handled by API interceptor.
+    } finally {
+      setBlackoutSaving(false);
+    }
+  };
+
+  const handleDeleteBlackout = async (blackoutId) => {
+    try {
+      setRemovingBlackoutId(blackoutId);
+      await resourceService.deleteBlackout(id, blackoutId);
+      setBlackouts((current) => current.filter((blackout) => blackout.id !== blackoutId));
+      toast.success('Blackout period removed');
+    } catch {
+      // Toast handled by API interceptor.
+    } finally {
+      setRemovingBlackoutId(null);
+    }
+  };
+
+  const handleSaveReview = async (event) => {
+    event.preventDefault();
+    if (!reviewForm.rating) {
+      toast.error('Choose a rating before submitting your review');
+      return;
+    }
+
+    try {
+      setReviewSaving(true);
+      const res = await resourceService.saveReview(id, {
+        rating: reviewForm.rating,
+        comment: reviewForm.comment.trim() || null,
+      });
+      setReviews((current) => {
+        const next = current.filter((review) => review.userId !== res.data.userId);
+        next.unshift(res.data);
+        return next.sort((left, right) => new Date(right.updatedAt || right.createdAt) - new Date(left.updatedAt || left.createdAt));
+      });
+      setResource((current) => {
+        if (!current) return current;
+        const isUpdate = reviews.some((review) => review.userId === res.data.userId);
+        const nextCount = isUpdate ? (current.reviewCount ?? 0) : (current.reviewCount ?? 0) + 1;
+        const currentTotal = (current.averageRating ?? 0) * (current.reviewCount ?? 0);
+        const previousRating = reviews.find((review) => review.userId === res.data.userId)?.rating ?? 0;
+        const adjustedTotal = isUpdate
+          ? currentTotal - previousRating + res.data.rating
+          : currentTotal + res.data.rating;
+
+        return {
+          ...current,
+          reviewCount: nextCount,
+          averageRating: nextCount > 0 ? Number((adjustedTotal / nextCount).toFixed(1)) : null,
+        };
+      });
+      toast.success(reviews.some((review) => review.userId === res.data.userId) ? 'Review updated' : 'Review added');
+    } catch {
+      // Toast handled by API interceptor.
+    } finally {
+      setReviewSaving(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    const reviewToRemove = reviews.find((review) => review.id === reviewId);
+    if (!reviewToRemove) return;
+
+    try {
+      setRemovingReviewId(reviewId);
+      await resourceService.deleteReview(id, reviewId);
+      setReviews((current) => current.filter((review) => review.id !== reviewId));
+      setResource((current) => {
+        if (!current) return current;
+        const nextCount = Math.max(0, (current.reviewCount ?? 0) - 1);
+        const currentTotal = (current.averageRating ?? 0) * (current.reviewCount ?? 0);
+        const adjustedTotal = currentTotal - reviewToRemove.rating;
+
+        return {
+          ...current,
+          reviewCount: nextCount,
+          averageRating: nextCount > 0 ? Number((adjustedTotal / nextCount).toFixed(1)) : null,
+        };
+      });
+      toast.success('Review removed');
+    } catch {
+      // Toast handled by API interceptor.
+    } finally {
+      setRemovingReviewId(null);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner size="lg" />;
   }
@@ -216,6 +440,8 @@ export default function ResourceDetailPage() {
   const amenities = resource.amenities || [];
   const photoUrls = resource.photoUrls || [];
   const maintenanceScore = getResourceHealthScore(resource);
+  const userReview = user ? reviews.find((review) => review.userId === user.id) : null;
+  const averageRatingLabel = resource.averageRating ? resource.averageRating.toFixed(1) : 'No ratings yet';
 
   return (
     <div>
@@ -228,7 +454,7 @@ export default function ResourceDetailPage() {
           Back to Resources
         </Link>
         <div className="flex flex-wrap gap-2">
-          {!isTechnician && user && (
+          {isUser && (
             <button
               onClick={handleToggleWatch}
               disabled={watchLoading || watchSaving}
@@ -256,6 +482,15 @@ export default function ResourceDetailPage() {
             <Sparkles className="h-4 w-4" />
             Ask AI
           </Link>
+          {!isTechnician && (
+            <button
+              onClick={handleShareBookingLink}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              <Share2 className="h-4 w-4" />
+              Share booking link
+            </button>
+          )}
           {!isTechnician && (
             <Link
               to={`/bookings/create?resourceId=${resource.id}`}
@@ -306,7 +541,7 @@ export default function ResourceDetailPage() {
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{resource.name}</h1>
-            {!isTechnician && (
+            {isUser && (
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 {watchLoading
                   ? 'Loading watchlist status...'
@@ -483,78 +718,336 @@ export default function ResourceDetailPage() {
       <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10">
-              <FileText className="h-5 w-5 text-blue-700 dark:text-blue-300" />
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-500/10">
+              <MessageSquare className="h-5 w-5 text-amber-700 dark:text-amber-300" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Weekly Resource Report Card</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Ratings & Reviews</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Auto-generated summary for {weeklyReport ? `${formatDate(weeklyReport.weekStart)} to ${formatDate(weeklyReport.weekEnd)}` : 'this week'}
+                Quick feedback from people who have used this resource.
               </p>
             </div>
           </div>
-          <button
-            onClick={handleDownloadWeeklyReport}
-            disabled={reportDownloading || !weeklyReport}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            {reportDownloading ? 'Preparing PDF...' : 'Download PDF'}
-          </button>
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{averageRatingLabel}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {resource.reviewCount ?? 0} review{resource.reviewCount === 1 ? '' : 's'}
+                </p>
+              </div>
+              <StarRating value={Math.round(resource.averageRating ?? 0)} readonly size="sm" />
+            </div>
+          </div>
         </div>
 
-        {reportLoading ? (
-          <div className="mt-6">
-            <LoadingSpinner />
-          </div>
-        ) : weeklyReport ? (
-          <>
-            <p className="mt-5 text-sm leading-6 text-gray-600 dark:text-gray-300">
-              {weeklyReport.operationalSummary}
-            </p>
-
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              {[
-                { label: 'Bookings', value: weeklyReport.totalBookings, subtext: `${weeklyReport.approvedBookings} approved` },
-                { label: 'Reserved Hours', value: weeklyReport.totalReservedHours, subtext: `${weeklyReport.averageAttendees} avg attendees` },
-                { label: 'Check-ins', value: `${weeklyReport.checkInRate}%`, subtext: `${weeklyReport.checkedInBookings} completed` },
-                { label: 'Tickets', value: weeklyReport.ticketsOpened, subtext: `${weeklyReport.ticketsResolved} resolved this week` },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 p-4"
-                >
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.label}</p>
-                  <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{item.value}</p>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.subtext}</p>
-                </div>
-              ))}
+        {!isTechnician && user && (
+          <form onSubmit={handleSaveReview} className="mt-5 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="font-medium text-gray-900 dark:text-white">
+                  {userReview ? 'Update your review' : 'Leave a review'}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Share a quick rating and any notes that would help other users.
+                </p>
+              </div>
+              <StarRating
+                value={reviewForm.rating}
+                onChange={(rating) => setReviewForm((current) => ({ ...current, rating }))}
+                readonly={reviewSaving}
+              />
             </div>
 
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Peak day</p>
-                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestDay}</p>
+            <textarea
+              rows={4}
+              value={reviewForm.comment}
+              onChange={(event) => setReviewForm((current) => ({ ...current, comment: event.target.value }))}
+              placeholder="What worked well? Anything others should know?"
+              className="mt-4 w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            />
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="submit"
+                disabled={reviewSaving}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Star className="h-4 w-4" />
+                {reviewSaving ? 'Saving review...' : userReview ? 'Update review' : 'Submit review'}
+              </button>
+              {userReview && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteReview(userReview.id)}
+                  disabled={removingReviewId === userReview.id}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-red-200 dark:border-red-800 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {removingReviewId === userReview.id ? 'Removing...' : 'Delete my review'}
+                </button>
+              )}
+            </div>
+          </form>
+        )}
+
+        <div className="mt-5 space-y-3">
+          {reviewsLoading ? (
+            <LoadingSpinner />
+          ) : reviews.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              No reviews yet. Be the first to rate this resource.
+            </p>
+          ) : (
+            reviews.map((review) => {
+              const canDeleteReview = isAdmin || user?.id === review.userId;
+              return (
+                <div
+                  key={review.id}
+                  className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 p-4"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <p className="font-semibold text-gray-900 dark:text-white">{review.userName}</p>
+                        <StarRating value={review.rating} readonly size="sm" />
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatDate(review.updatedAt || review.createdAt)}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
+                        {review.comment || 'Rated this resource without additional comments.'}
+                      </p>
+                    </div>
+                    {canDeleteReview && (
+                      <button
+                        onClick={() => handleDeleteReview(review.id)}
+                        disabled={removingReviewId === review.id}
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-full border border-red-200 dark:border-red-800 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {removingReviewId === review.id ? 'Removing...' : 'Delete'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-rose-100 dark:bg-rose-500/10">
+            <Ban className="h-5 w-5 text-rose-700 dark:text-rose-300" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Resource Blackout Dates</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Block out maintenance windows, holidays, and special events so the resource cannot be booked during those periods.
+            </p>
+          </div>
+        </div>
+
+        {isAdmin && (
+          <form onSubmit={handleCreateBlackout} className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Blackout title
+              </label>
+              <input
+                type="text"
+                value={blackoutForm.title}
+                onChange={(e) => handleBlackoutInputChange('title', e.target.value)}
+                placeholder="Maintenance, public holiday, exam event..."
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Start time
+              </label>
+              <input
+                type="datetime-local"
+                value={blackoutForm.startTime}
+                onChange={(e) => handleBlackoutInputChange('startTime', e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                End time
+              </label>
+              <input
+                type="datetime-local"
+                value={blackoutForm.endTime}
+                onChange={(e) => handleBlackoutInputChange('endTime', e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Notes
+              </label>
+              <textarea
+                rows={3}
+                value={blackoutForm.reason}
+                onChange={(e) => handleBlackoutInputChange('reason', e.target.value)}
+                placeholder="Optional note for admins and users."
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <button
+                type="submit"
+                disabled={blackoutSaving}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                {blackoutSaving ? 'Saving blackout...' : 'Add blackout period'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className="mt-5 space-y-3">
+          {blackoutsLoading ? (
+            <LoadingSpinner />
+          ) : blackouts.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              No blackout periods have been scheduled for this resource.
+            </p>
+          ) : (
+            blackouts.map((blackout) => {
+              const isPast = new Date(blackout.endTime) < new Date();
+              return (
+                <div
+                  key={blackout.id}
+                  className={`rounded-2xl border p-4 ${
+                    isPast
+                      ? 'border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40'
+                      : 'border-rose-200 dark:border-rose-900/70 bg-rose-50/70 dark:bg-rose-950/20'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-gray-900 dark:text-white">{blackout.title}</p>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                            isPast
+                              ? 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                              : 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'
+                          }`}
+                        >
+                          {isPast ? 'Past blackout' : 'Blocked'}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        {formatDateTime(blackout.startTime)} - {formatDateTime(blackout.endTime)}
+                      </p>
+                      {blackout.reason && (
+                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 whitespace-pre-wrap">
+                          {blackout.reason}
+                        </p>
+                      )}
+                    </div>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDeleteBlackout(blackout.id)}
+                        disabled={removingBlackoutId === blackout.id}
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-full border border-red-200 dark:border-red-800 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {removingBlackoutId === blackout.id ? 'Removing...' : 'Remove'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {canViewWeeklyReport && (
+        <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/10">
+                <FileText className="h-5 w-5 text-blue-700 dark:text-blue-300" />
               </div>
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Peak time</p>
-                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestTimeRange}</p>
-              </div>
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Utilization band</p>
-                <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.utilizationBand}</p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {weeklyReport.openTickets} active maintenance ticket{weeklyReport.openTickets !== 1 ? 's' : ''}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Weekly Resource Report Card</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Auto-generated summary for {weeklyReport ? `${formatDate(weeklyReport.weekStart)} to ${formatDate(weeklyReport.weekEnd)}` : 'this week'}
                 </p>
               </div>
             </div>
-          </>
-        ) : (
-          <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
-            Weekly report data is unavailable right now.
-          </p>
-        )}
-      </div>
+            <button
+              onClick={handleDownloadWeeklyReport}
+              disabled={reportDownloading || !weeklyReport}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              {reportDownloading ? 'Preparing PDF...' : 'Download PDF'}
+            </button>
+          </div>
+
+          {reportLoading ? (
+            <div className="mt-6">
+              <LoadingSpinner />
+            </div>
+          ) : weeklyReport ? (
+            <>
+              <p className="mt-5 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                {weeklyReport.operationalSummary}
+              </p>
+
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                {[
+                  { label: 'Bookings', value: weeklyReport.totalBookings, subtext: `${weeklyReport.approvedBookings} approved` },
+                  { label: 'Reserved Hours', value: weeklyReport.totalReservedHours, subtext: `${weeklyReport.averageAttendees} avg attendees` },
+                  { label: 'Check-ins', value: `${weeklyReport.checkInRate}%`, subtext: `${weeklyReport.checkedInBookings} completed` },
+                  { label: 'Tickets', value: weeklyReport.ticketsOpened, subtext: `${weeklyReport.ticketsResolved} resolved this week` },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 p-4"
+                  >
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{item.label}</p>
+                    <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{item.value}</p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.subtext}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Peak day</p>
+                  <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestDay}</p>
+                </div>
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Peak time</p>
+                  <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.busiestTimeRange}</p>
+                </div>
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Utilization band</p>
+                  <p className="mt-2 font-semibold text-gray-900 dark:text-white">{weeklyReport.utilizationBand}</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {weeklyReport.openTickets} active maintenance ticket{weeklyReport.openTickets !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+              Weekly report data is unavailable right now.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         <button

@@ -11,17 +11,30 @@ import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.smartcampus.activity.service.ActivityLogService;
+import com.smartcampus.auth.entity.User;
+import com.smartcampus.auth.repository.UserRepository;
 import com.smartcampus.booking.entity.Booking;
 import com.smartcampus.booking.entity.BookingStatus;
 import com.smartcampus.booking.repository.BookingRepository;
+import com.smartcampus.common.exception.AccessDeniedException;
+import com.smartcampus.common.exception.BadRequestException;
+import com.smartcampus.common.exception.ConflictException;
 import com.smartcampus.common.exception.ResourceNotFoundException;
+import com.smartcampus.resource.dto.ResourceBlackoutRequest;
+import com.smartcampus.resource.dto.ResourceBlackoutResponse;
 import com.smartcampus.resource.dto.ResourceRequest;
+import com.smartcampus.resource.dto.ResourceReviewRequest;
+import com.smartcampus.resource.dto.ResourceReviewResponse;
 import com.smartcampus.resource.dto.ResourceResponse;
 import com.smartcampus.resource.dto.WeeklyResourceReportResponse;
 import com.smartcampus.resource.entity.CampusResource;
+import com.smartcampus.resource.entity.ResourceBlackout;
+import com.smartcampus.resource.entity.ResourceReview;
 import com.smartcampus.resource.entity.ResourceStatus;
 import com.smartcampus.resource.entity.ResourceType;
 import com.smartcampus.resource.repository.CampusResourceRepository;
+import com.smartcampus.resource.repository.ResourceBlackoutRepository;
+import com.smartcampus.resource.repository.ResourceReviewRepository;
 import com.smartcampus.ticket.entity.Ticket;
 import com.smartcampus.ticket.entity.TicketStatus;
 import com.smartcampus.ticket.repository.TicketRepository;
@@ -48,18 +61,27 @@ public class CampusResourceServiceImpl implements CampusResourceService {
 
     private final CampusResourceRepository repository;
     private final BookingRepository bookingRepository;
+    private final ResourceBlackoutRepository blackoutRepository;
+    private final ResourceReviewRepository reviewRepository;
     private final TicketRepository ticketRepository;
+    private final UserRepository userRepository;
     private final ModelMapper modelMapper;
     private final ActivityLogService activityLogService;
 
     public CampusResourceServiceImpl(CampusResourceRepository repository,
                                      BookingRepository bookingRepository,
+                                     ResourceBlackoutRepository blackoutRepository,
+                                     ResourceReviewRepository reviewRepository,
                                      TicketRepository ticketRepository,
+                                     UserRepository userRepository,
                                      ModelMapper modelMapper,
                                      ActivityLogService activityLogService) {
         this.repository = repository;
         this.bookingRepository = bookingRepository;
+        this.blackoutRepository = blackoutRepository;
+        this.reviewRepository = reviewRepository;
         this.ticketRepository = ticketRepository;
+        this.userRepository = userRepository;
         this.modelMapper = modelMapper;
         this.activityLogService = activityLogService;
     }
@@ -85,6 +107,139 @@ public class CampusResourceServiceImpl implements CampusResourceService {
     public ResourceResponse getById(Long id) {
         CampusResource resource = findActiveById(id);
         return toResponse(resource);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResourceBlackoutResponse> getBlackouts(Long id) {
+        CampusResource resource = findActiveById(id);
+        return blackoutRepository.findByResourceIdOrderByStartTimeAsc(resource.getId())
+                .stream()
+                .map(this::toBlackoutResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "resources", allEntries = true)
+    public ResourceBlackoutResponse createBlackout(Long id, ResourceBlackoutRequest request) {
+        CampusResource resource = findActiveById(id);
+        validateBlackoutWindow(request.getStartTime(), request.getEndTime());
+
+        List<ResourceBlackout> overlappingBlackouts = blackoutRepository.findOverlapping(
+                resource.getId(),
+                request.getStartTime(),
+                request.getEndTime()
+        );
+        if (!overlappingBlackouts.isEmpty()) {
+            throw new ConflictException("Blackout period overlaps an existing blackout");
+        }
+
+        List<Booking> activeBookings = bookingRepository.findConflicting(
+                resource.getId(),
+                request.getStartTime(),
+                request.getEndTime()
+        );
+        if (!activeBookings.isEmpty()) {
+            throw new ConflictException("Blackout period overlaps an existing booking");
+        }
+
+        ResourceBlackout blackout = new ResourceBlackout();
+        blackout.setResource(resource);
+        blackout.setTitle(request.getTitle().trim());
+        blackout.setReason(request.getReason());
+        blackout.setStartTime(request.getStartTime());
+        blackout.setEndTime(request.getEndTime());
+
+        ResourceBlackout saved = blackoutRepository.save(blackout);
+        activityLogService.log(
+                null,
+                "Admin",
+                "RESOURCE_BLACKOUT_CREATED",
+                "RESOURCE",
+                resource.getId(),
+                "Blocked " + resource.getName() + " from " + request.getStartTime() + " to " + request.getEndTime()
+        );
+        return toBlackoutResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "resources", allEntries = true)
+    public void deleteBlackout(Long id, Long blackoutId) {
+        CampusResource resource = findActiveById(id);
+        ResourceBlackout blackout = blackoutRepository.findByIdAndResourceId(blackoutId, resource.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Resource blackout", blackoutId));
+        blackoutRepository.delete(blackout);
+        activityLogService.log(
+                null,
+                "Admin",
+                "RESOURCE_BLACKOUT_DELETED",
+                "RESOURCE",
+                resource.getId(),
+                "Removed blackout \"" + blackout.getTitle() + "\" from " + resource.getName()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResourceReviewResponse> getReviews(Long id) {
+        CampusResource resource = findActiveById(id);
+        return reviewRepository.findByResourceIdOrderByUpdatedAtDescCreatedAtDesc(resource.getId())
+                .stream()
+                .map(this::toReviewResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "resources", allEntries = true)
+    public ResourceReviewResponse upsertReview(Long id, ResourceReviewRequest request, Long userId) {
+        CampusResource resource = findActiveById(id);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        var existingReview = reviewRepository.findByResourceIdAndUserId(resource.getId(), userId);
+        ResourceReview review = existingReview.orElseGet(ResourceReview::new);
+
+        review.setResource(resource);
+        review.setUser(user);
+        review.setRating(request.getRating());
+        review.setComment(normalizeReviewComment(request.getComment()));
+
+        ResourceReview saved = reviewRepository.save(review);
+        activityLogService.log(
+                userId,
+                user.getName(),
+                existingReview.isPresent() ? "RESOURCE_REVIEW_UPDATED" : "RESOURCE_REVIEW_CREATED",
+                "RESOURCE",
+                resource.getId(),
+                "Submitted a " + request.getRating() + "-star review for " + resource.getName()
+        );
+        return toReviewResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "resources", allEntries = true)
+    public void deleteReview(Long id, Long reviewId, Long userId, boolean admin) {
+        CampusResource resource = findActiveById(id);
+        ResourceReview review = reviewRepository.findByIdAndResourceId(reviewId, resource.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Resource review", reviewId));
+
+        if (!admin && !review.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("You can only delete your own review");
+        }
+
+        reviewRepository.delete(review);
+        activityLogService.log(
+                userId,
+                admin ? "Admin" : review.getUser().getName(),
+                "RESOURCE_REVIEW_DELETED",
+                "RESOURCE",
+                resource.getId(),
+                "Deleted a review for " + resource.getName()
+        );
     }
 
     @Override
@@ -343,6 +498,8 @@ public class CampusResourceServiceImpl implements CampusResourceService {
     }
 
     private ResourceResponse toResponse(CampusResource r) {
+        Double averageRating = reviewRepository.averageRatingByResourceId(r.getId());
+        long reviewCount = reviewRepository.countByResourceId(r.getId());
         return new ResourceResponse(
                 r.getId(), r.getName(), r.getType(), r.getCapacity(),
                 r.getLocation(),
@@ -354,6 +511,8 @@ public class CampusResourceServiceImpl implements CampusResourceService {
                 r.getOwnerName(),
                 r.getDepartment(),
                 r.getMaintenanceScore(),
+                averageRating == null ? null : roundToOneDecimal(averageRating),
+                reviewCount,
                 r.getAvailabilityStartTime(), r.getAvailabilityEndTime(),
                 r.getStatus(), r.getCreatedAt(), r.getUpdatedAt()
         );
@@ -436,6 +595,50 @@ public class CampusResourceServiceImpl implements CampusResourceService {
                 ticketsResolved,
                 openTickets
         );
+    }
+
+    private ResourceBlackoutResponse toBlackoutResponse(ResourceBlackout blackout) {
+        return new ResourceBlackoutResponse(
+                blackout.getId(),
+                blackout.getResource().getId(),
+                blackout.getResource().getName(),
+                blackout.getTitle(),
+                blackout.getReason(),
+                blackout.getStartTime(),
+                blackout.getEndTime(),
+                blackout.getCreatedAt()
+        );
+    }
+
+    private ResourceReviewResponse toReviewResponse(ResourceReview review) {
+        return new ResourceReviewResponse(
+                review.getId(),
+                review.getResource().getId(),
+                review.getUser().getId(),
+                review.getUser().getName(),
+                review.getUser().getPictureUrl(),
+                review.getRating(),
+                review.getComment(),
+                review.getCreatedAt(),
+                review.getUpdatedAt()
+        );
+    }
+
+    private void validateBlackoutWindow(java.time.LocalDateTime startTime, java.time.LocalDateTime endTime) {
+        if (startTime == null || endTime == null) {
+            throw new BadRequestException("Blackout start and end times are required");
+        }
+        if (!endTime.isAfter(startTime)) {
+            throw new BadRequestException("Blackout end time must be after start time");
+        }
+    }
+
+    private String normalizeReviewComment(String comment) {
+        if (comment == null) {
+            return null;
+        }
+        String trimmed = comment.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void addTableRow(PdfPTable table, String label, Object value, Font font) {

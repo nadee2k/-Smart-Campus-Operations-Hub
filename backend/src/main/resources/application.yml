@@ -59,3 +59,5 @@ app:
       base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
   watchlist:
     alert-check-ms: ${WATCHLIST_ALERT_CHECK_MS:900000}
+  mail:
+    from: ${MAIL_FROM:no-reply@smartcampus.local}

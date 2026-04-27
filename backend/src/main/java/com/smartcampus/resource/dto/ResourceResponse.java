@@ -21,6 +21,8 @@ public record ResourceResponse(
         String ownerName,
         String department,
         Integer maintenanceScore,
+        Double averageRating,
+        Long reviewCount,
         LocalTime availabilityStartTime,
         LocalTime availabilityEndTime,
         ResourceStatus status,

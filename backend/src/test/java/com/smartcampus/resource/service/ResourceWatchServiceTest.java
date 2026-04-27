@@ -112,12 +112,24 @@ class ResourceWatchServiceTest {
 
         verify(notificationService).sendNotification(
                 eq(5L),
-                eq("RESOURCE_AVAILABLE"),
-                org.mockito.ArgumentMatchers.contains("Innovation Hub"),
+                eq("RESOURCE_AVAILABILITY_ALERT"),
+                org.mockito.ArgumentMatchers.contains("booking was cancelled"),
                 eq("RESOURCE"),
                 eq(10L)
         );
         verify(resourceWatchRepository).deleteByResourceId(10L);
+    }
+
+    @Test
+    void notifyWatchersResourceAvailable_shouldIgnoreRejectedBookings() {
+        Booking booking = new Booking();
+        booking.setResource(resource);
+        booking.setStatus(BookingStatus.REJECTED);
+
+        service.notifyWatchersResourceAvailable(booking);
+
+        verify(notificationService, org.mockito.Mockito.never()).sendNotification(any(), any(), any(), any(), any());
+        verify(resourceWatchRepository, org.mockito.Mockito.never()).deleteByResourceId(any());
     }
 
     @Test
