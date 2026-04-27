@@ -4,7 +4,8 @@
 -- ============================================================
 
 CREATE DATABASE smartcampus;
-
+ 
+ 
 \c smartcampus;
 
 CREATE TABLE users (

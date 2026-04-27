@@ -57,6 +57,32 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    @Override
+    public void sendEmail(String to, String subject, String body) {
+        try {
+            sendEmailOrThrow(to, subject, body);
+        } catch (Exception e) {
+            log.warn("Failed to send email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    @Override
+    public void sendEmailOrThrow(String to, String subject, String body) {
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender == null) {
+            log.debug("Skipping email to {} because JavaMailSender is not configured", to);
+            return;
+        }
+        SimpleMailMessage message = new SimpleMailMessage();
+        if (StringUtils.hasText(fromAddress)) {
+            message.setFrom(fromAddress);
+        }
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(body);
+        mailSender.send(message);
+    }
+
     private String buildBookingApprovedBody(Booking booking) {
         return """
                 Hello %s,

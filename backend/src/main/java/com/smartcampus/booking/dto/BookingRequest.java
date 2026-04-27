@@ -27,6 +27,8 @@ public class BookingRequest {
     @Min(value = 1, message = "At least 1 attendee required")
     private Integer expectedAttendees;
 
+    private Boolean joinWaitlist = false;
+
     public Long getResourceId() { return resourceId; }
     public void setResourceId(Long resourceId) { this.resourceId = resourceId; }
     public LocalDateTime getStartTime() { return startTime; }
@@ -37,4 +39,6 @@ public class BookingRequest {
     public void setPurpose(String purpose) { this.purpose = purpose; }
     public Integer getExpectedAttendees() { return expectedAttendees; }
     public void setExpectedAttendees(Integer expectedAttendees) { this.expectedAttendees = expectedAttendees; }
+    public Boolean getJoinWaitlist() { return joinWaitlist; }
+    public void setJoinWaitlist(Boolean joinWaitlist) { this.joinWaitlist = joinWaitlist; }
 }

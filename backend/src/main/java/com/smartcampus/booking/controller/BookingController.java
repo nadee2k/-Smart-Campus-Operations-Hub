@@ -1,5 +1,6 @@
 package com.smartcampus.booking.controller;
 
+import com.smartcampus.auth.entity.User;
 import com.smartcampus.booking.dto.BookingActionRequest;
 import com.smartcampus.booking.dto.BookingRequest;
 import com.smartcampus.booking.dto.BookingResponse;
@@ -9,6 +10,7 @@ import com.smartcampus.common.dto.PageResponse;
 import com.smartcampus.config.security.AuthUtil;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,7 +39,16 @@ public class BookingController {
 
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(bookingService.getById(id));
+        User viewer = AuthUtil.getCurrentUser();
+        return ResponseEntity.ok(bookingService.getById(id, viewer.getId(), viewer.getRole()));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<BookingResponse> update(@PathVariable Long id,
+                                                  @Valid @RequestBody BookingRequest request) {
+        Long userId = AuthUtil.getCurrentUserId();
+        return ResponseEntity.ok(bookingService.update(id, request, userId));
     }
 
     @GetMapping
@@ -47,14 +58,14 @@ public class BookingController {
             @RequestParam(required = false) Long resourceId,
             @RequestParam(required = false) LocalDateTime startDate,
             @RequestParam(required = false) LocalDateTime endDate,
-            @PageableDefault(size = 10, sort = "created_at") Pageable pageable) {
+            @PageableDefault(size = 10, sort = "created_at", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(PageResponse.of(
                 bookingService.getFiltered(status, resourceId, startDate, endDate, pageable)));
     }
 
     @GetMapping("/my")
     public ResponseEntity<PageResponse<BookingResponse>> getMyBookings(
-            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Long userId = AuthUtil.getCurrentUserId();
         return ResponseEntity.ok(PageResponse.of(bookingService.getByUser(userId, pageable)));
     }
@@ -95,6 +106,19 @@ public class BookingController {
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
         return ResponseEntity.ok(bookingService.getCalendar(resourceId, start, end));
+    }
+
+    @GetMapping("/waitlist/my")
+    public ResponseEntity<PageResponse<BookingResponse>> getMyWaitlistedBookings(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Long userId = AuthUtil.getCurrentUserId();
+        return ResponseEntity.ok(PageResponse.of(bookingService.getMyWaitlistedBookings(userId, pageable)));
+    }
+
+    @DeleteMapping("/{id}/waitlist")
+    public ResponseEntity<BookingResponse> leaveWaitlist(@PathVariable Long id) {
+        Long userId = AuthUtil.getCurrentUserId();
+        return ResponseEntity.ok(bookingService.leaveWaitlist(id, userId));
     }
 
     @GetMapping("/suggestions")

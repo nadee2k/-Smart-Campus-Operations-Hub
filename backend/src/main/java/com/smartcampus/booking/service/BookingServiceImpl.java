@@ -1,6 +1,7 @@
 package com.smartcampus.booking.service;
 
 import com.smartcampus.activity.service.ActivityLogService;
+import com.smartcampus.auth.entity.Role;
 import com.smartcampus.auth.entity.User;
 import com.smartcampus.auth.service.UserService;
 import com.smartcampus.booking.dto.BookingRequest;
@@ -8,6 +9,7 @@ import com.smartcampus.booking.dto.BookingResponse;
 import com.smartcampus.booking.entity.Booking;
 import com.smartcampus.booking.entity.BookingStatus;
 import com.smartcampus.booking.repository.BookingRepository;
+import com.smartcampus.common.exception.AccessDeniedException;
 import com.smartcampus.common.exception.BadRequestException;
 import com.smartcampus.common.exception.ConflictException;
 import com.smartcampus.common.exception.ResourceNotFoundException;
@@ -78,9 +80,6 @@ public class BookingServiceImpl implements BookingService {
 
         List<Booking> conflicts = bookingRepository.findConflicting(
                 resource.getId(), request.getStartTime(), request.getEndTime());
-        if (!conflicts.isEmpty()) {
-            throw new ConflictException("Time slot conflicts with an existing booking");
-        }
 
         List<ResourceBlackout> blackoutConflicts = blackoutRepository.findOverlapping(
                 resource.getId(),
@@ -100,17 +99,78 @@ public class BookingServiceImpl implements BookingService {
         booking.setEndTime(request.getEndTime());
         booking.setPurpose(request.getPurpose());
         booking.setExpectedAttendees(request.getExpectedAttendees());
-        booking.setStatus(BookingStatus.PENDING);
 
+        if (!conflicts.isEmpty()) {
+            if (!Boolean.TRUE.equals(request.getJoinWaitlist())) {
+                throw new ConflictException("Time slot conflicts with an existing booking");
+            }
+            booking.setStatus(BookingStatus.WAITLISTED);
+            Booking saved = bookingRepository.save(booking);
+            int position = (int) bookingRepository.countWaitlistAheadOf(
+                    resource.getId(), request.getStartTime(), request.getEndTime(), saved.getCreatedAt()) + 1;
+            notificationService.sendNotification(userId, "WAITLIST_JOINED",
+                    "You've joined the waitlist for " + resource.getName() + " (position #" + position + "). We'll notify you when a slot opens.",
+                    "BOOKING", saved.getId());
+            activityLogService.log(userId, user.getName(), "WAITLIST_JOINED", "BOOKING", saved.getId(),
+                    "Joined waitlist for " + resource.getName());
+            return toResponse(saved);
+        }
+
+        booking.setStatus(BookingStatus.PENDING);
         Booking saved = bookingRepository.save(booking);
         activityLogService.log(userId, user.getName(), "BOOKING_CREATED", "BOOKING", saved.getId(), "Booked " + resource.getName());
         return toResponse(saved);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public BookingResponse getById(Long id) {
+    @Transactional
+    public BookingResponse update(Long id, BookingRequest request, Long userId) {
         Booking booking = findById(id);
+
+        if (!booking.getUser().getId().equals(userId)) {
+            throw new com.smartcampus.common.exception.AccessDeniedException("You can only edit your own bookings");
+        }
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new BadRequestException("Only pending bookings can be edited");
+        }
+        if (request.getEndTime().isBefore(request.getStartTime()) ||
+            request.getEndTime().isEqual(request.getStartTime())) {
+            throw new BadRequestException("End time must be after start time");
+        }
+
+        CampusResource resource = resourceRepository.findById(request.getResourceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Resource", request.getResourceId()));
+        if (resource.getDeleted()) {
+            throw new ResourceNotFoundException("Resource", request.getResourceId());
+        }
+
+        List<Booking> conflicts = bookingRepository.findConflicting(
+                resource.getId(), request.getStartTime(), request.getEndTime());
+        conflicts.removeIf(c -> c.getId().equals(id));
+        if (!conflicts.isEmpty()) {
+            throw new ConflictException("Time slot conflicts with an existing booking");
+        }
+
+        booking.setResource(resource);
+        booking.setStartTime(request.getStartTime());
+        booking.setEndTime(request.getEndTime());
+        booking.setPurpose(request.getPurpose());
+        booking.setExpectedAttendees(request.getExpectedAttendees());
+
+        Booking saved = bookingRepository.save(booking);
+        activityLogService.log(userId, booking.getUser().getName(), "BOOKING_UPDATED", "BOOKING", saved.getId(), "Updated booking for " + resource.getName());
+        return toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BookingResponse getById(Long id, Long viewerUserId, Role viewerRole) {
+        Booking booking = findById(id);
+        boolean owner = booking.getUser().getId().equals(viewerUserId);
+        boolean admin = viewerRole == Role.ADMIN;
+        if (!owner && !admin) {
+            throw new AccessDeniedException("You can only view your own bookings");
+        }
         return toResponse(booking);
     }
 
@@ -141,6 +201,12 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse approve(Long id, String adminComment) {
         Booking booking = findById(id);
         validateTransition(booking, BookingStatus.APPROVED);
+        List<Booking> conflicts = bookingRepository.findConflicting(
+                booking.getResource().getId(), booking.getStartTime(), booking.getEndTime());
+        boolean overlapsOther = conflicts.stream().anyMatch(c -> !c.getId().equals(booking.getId()));
+        if (overlapsOther) {
+            throw new ConflictException("Cannot approve: time slot overlaps another active booking");
+        }
         booking.setStatus(BookingStatus.APPROVED);
         booking.setAdminComment(adminComment);
         Booking saved = bookingRepository.save(booking);
@@ -159,6 +225,9 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse reject(Long id, String adminComment) {
+        if (adminComment == null || adminComment.isBlank()) {
+            throw new BadRequestException("A reason is required when rejecting a booking");
+        }
         Booking booking = findById(id);
         validateTransition(booking, BookingStatus.REJECTED);
         booking.setStatus(BookingStatus.REJECTED);
@@ -181,7 +250,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse cancel(Long id, Long userId, String reason) {
         Booking booking = findById(id);
         if (!booking.getUser().getId().equals(userId)) {
-            throw new com.smartcampus.common.exception.AccessDeniedException("You can only cancel your own bookings");
+            throw new AccessDeniedException("You can only cancel your own bookings");
         }
         validateTransition(booking, BookingStatus.CANCELLED);
         booking.setStatus(BookingStatus.CANCELLED);
@@ -191,6 +260,7 @@ public class BookingServiceImpl implements BookingService {
         Booking saved = bookingRepository.save(booking);
         activityLogService.log(userId, booking.getUser().getName(), "BOOKING_CANCELLED", "BOOKING", saved.getId(), "Cancelled booking for " + booking.getResource().getName());
         resourceWatchService.notifyWatchersResourceAvailable(saved);
+        promoteFromWaitlist(saved);
         return toResponse(saved);
     }
 
@@ -199,7 +269,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse checkIn(Long id, Long userId) {
         Booking booking = findById(id);
         if (!booking.getUser().getId().equals(userId)) {
-            throw new com.smartcampus.common.exception.AccessDeniedException("You can only check in to your own bookings");
+            throw new AccessDeniedException("You can only check in to your own bookings");
         }
         if (booking.getStatus() != BookingStatus.APPROVED) {
             throw new com.smartcampus.common.exception.BadRequestException("Can only check in to approved bookings");
@@ -460,6 +530,50 @@ public class BookingServiceImpl implements BookingService {
         };
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<BookingResponse> getMyWaitlistedBookings(Long userId, org.springframework.data.domain.Pageable pageable) {
+        return bookingRepository.findByUserIdAndStatus(userId, BookingStatus.WAITLISTED, pageable)
+                .map(this::toResponse);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse leaveWaitlist(Long bookingId, Long userId) {
+        Booking booking = findById(bookingId);
+        if (!booking.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("You can only leave your own waitlist");
+        }
+        if (booking.getStatus() != BookingStatus.WAITLISTED) {
+            throw new BadRequestException("Booking is not on the waitlist");
+        }
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancellationReason("Left waitlist");
+        Booking saved = bookingRepository.save(booking);
+        activityLogService.log(userId, booking.getUser().getName(), "WAITLIST_LEFT", "BOOKING", saved.getId(),
+                "Left waitlist for " + booking.getResource().getName());
+        return toResponse(saved);
+    }
+
+    private void promoteFromWaitlist(Booking freed) {
+        List<Booking> waitlisted = bookingRepository.findWaitlistedByResourceAndTime(
+                freed.getResource().getId(), freed.getStartTime(), freed.getEndTime());
+        if (!waitlisted.isEmpty()) {
+            Booking first = waitlisted.get(0);
+            first.setStatus(BookingStatus.PENDING);
+            bookingRepository.save(first);
+            notificationService.sendNotification(
+                    first.getUser().getId(),
+                    "WAITLIST_PROMOTED",
+                    "A slot opened up! Your waitlisted booking for " + freed.getResource().getName() +
+                    " is now Pending — awaiting admin approval.",
+                    "BOOKING", first.getId());
+            activityLogService.log(first.getUser().getId(), first.getUser().getName(),
+                    "WAITLIST_PROMOTED", "BOOKING", first.getId(),
+                    "Promoted from waitlist to PENDING for " + freed.getResource().getName());
+        }
+    }
+
     private void addSlotIfAvailable(List<Map<String, Object>> allSlots,
                                     LocalDateTime windowStart,
                                     LocalDateTime windowEnd,
@@ -485,12 +599,11 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private record TimeWindow(LocalDateTime start, LocalDateTime end) {}
-
     private void validateTransition(Booking booking, BookingStatus target) {
         BookingStatus current = booking.getStatus();
         boolean valid = switch (target) {
             case APPROVED, REJECTED -> current == BookingStatus.PENDING;
-            case CANCELLED -> current == BookingStatus.PENDING || current == BookingStatus.APPROVED;
+            case CANCELLED -> current == BookingStatus.PENDING || current == BookingStatus.APPROVED || current == BookingStatus.WAITLISTED;
             default -> false;
         };
         if (!valid) {
@@ -529,6 +642,11 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private BookingResponse toResponse(Booking b) {
+        Integer waitlistPosition = null;
+        if (b.getStatus() == BookingStatus.WAITLISTED && b.getCreatedAt() != null) {
+            waitlistPosition = (int) bookingRepository.countWaitlistAheadOf(
+                    b.getResource().getId(), b.getStartTime(), b.getEndTime(), b.getCreatedAt()) + 1;
+        }
         return new BookingResponse(
                 b.getId(),
                 b.getResource().getId(),
@@ -544,7 +662,8 @@ public class BookingServiceImpl implements BookingService {
                 b.getCancellationReason(),
                 b.getCheckedIn(),
                 b.getCheckedInAt(),
-                b.getCreatedAt()
+                b.getCreatedAt(),
+                waitlistPosition
         );
     }
 }

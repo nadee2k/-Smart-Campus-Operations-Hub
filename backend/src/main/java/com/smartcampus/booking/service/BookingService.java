@@ -1,5 +1,6 @@
 package com.smartcampus.booking.service;
 
+import com.smartcampus.auth.entity.Role;
 import com.smartcampus.booking.dto.BookingRequest;
 import com.smartcampus.booking.dto.BookingResponse;
 import com.smartcampus.booking.entity.BookingStatus;
@@ -14,7 +15,9 @@ public interface BookingService {
 
     BookingResponse create(BookingRequest request, Long userId);
 
-    BookingResponse getById(Long id);
+    BookingResponse update(Long id, BookingRequest request, Long userId);
+
+    BookingResponse getById(Long id, Long viewerUserId, Role viewerRole);
 
     Page<BookingResponse> getAll(Pageable pageable);
 
@@ -35,4 +38,8 @@ public interface BookingService {
     List<BookingResponse> getCalendar(Long resourceId, LocalDateTime start, LocalDateTime end);
 
     List<Map<String, Object>> getSuggestions(Long resourceId, java.time.LocalDate date, int durationMinutes);
+
+    Page<BookingResponse> getMyWaitlistedBookings(Long userId, Pageable pageable);
+
+    BookingResponse leaveWaitlist(Long bookingId, Long userId);
 }

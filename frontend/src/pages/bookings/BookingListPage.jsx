@@ -7,17 +7,17 @@ import Pagination from '../../components/common/Pagination';
 import StatusBadge from '../../components/common/StatusBadge';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
-import { Plus, XCircle, LogIn, Download, Search, Filter } from 'lucide-react';
+import { Plus, XCircle, LogIn, Download, Eye, ListOrdered } from 'lucide-react';
 import { exportCsv } from '../../utils/exportCsv';
 import BookingQRCode from '../../components/bookings/BookingQRCode';
 import { useAuth } from '../../context/AuthContext';
-import { resourceService } from '../../services/resourceService';
 
 const ROW_BORDER_MAP = {
   PENDING: 'border-l-amber-400',
   APPROVED: 'border-l-emerald-400',
   REJECTED: 'border-l-red-400',
   CANCELLED: 'border-l-gray-400',
+  WAITLISTED: 'border-l-indigo-400',
 };
 
 function formatDateTimeRange(start, end) {
@@ -46,14 +46,12 @@ export default function BookingListPage() {
   const [bookingToCancel, setBookingToCancel] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [checkingIn, setCheckingIn] = useState({});
-  const [searchQuery, setSearchQuery] = useState('');
-  const [resourceFilter, setResourceFilter] = useState('');
-  const [resources, setResources] = useState([]);
+  const [leavingWaitlist, setLeavingWaitlist] = useState({});
 
   const fetchBookings = () => {
     setLoading(true);
     bookingService
-      .getMyBookings({ page, size: 10 })
+      .getMyBookings({ page, size: 10, sort: 'createdAt,desc' })
       .then((res) => {
         const data = res.data;
         setBookings(data.content ?? data ?? []);
@@ -64,12 +62,6 @@ export default function BookingListPage() {
   };
 
   useEffect(() => { fetchBookings(); }, [page]);
-
-  useEffect(() => {
-    resourceService.getAll({ size: 100 })
-      .then(res => setResources(res.data.content || res.data || []))
-      .catch(() => {});
-  }, []);
 
   const handleCancelClick = (booking) => { setBookingToCancel(booking); setCancelReason(''); setCancelModalOpen(true); };
 
@@ -101,6 +93,15 @@ export default function BookingListPage() {
 
   const canCancel = (status) => ['PENDING', 'APPROVED'].includes(status);
 
+  const handleLeaveWaitlist = (id) => {
+    setLeavingWaitlist((p) => ({ ...p, [id]: true }));
+    bookingService
+      .leaveWaitlist(id)
+      .then(() => { toast.success('Removed from waitlist'); fetchBookings(); })
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to leave waitlist'))
+      .finally(() => setLeavingWaitlist((p) => ({ ...p, [id]: false })));
+  };
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -120,43 +121,12 @@ export default function BookingListPage() {
         {!isAdmin && (
           <Link
             to="/bookings/create"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-full text-sm font-medium transition-all shadow-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-full text-sm font-medium hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/25"
           >
             <Plus className="h-4 w-4" />
             New Booking
           </Link>
         )}
-        </div>
-      </div>
-
-      {/* Unified Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6 bg-white dark:bg-gray-900 p-3 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
-        <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search by purpose or resource name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border-none rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all"
-          />
-        </div>
-        <div className="relative sm:w-64">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Filter className="h-4 w-4 text-gray-400" />
-          </div>
-          <select
-            value={resourceFilter}
-            onChange={(e) => setResourceFilter(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border-none rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer appearance-none"
-          >
-            <option value="">All Resources</option>
-            {resources.map(res => (
-              <option key={res.id} value={res.id}>{res.name}</option>
-            ))}
-          </select>
         </div>
       </div>
 
@@ -178,24 +148,20 @@ export default function BookingListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {bookings
-                  .filter(b => !resourceFilter || Number(b.resource?.id || b.resourceId) === Number(resourceFilter))
-                  .filter(b => !searchQuery || 
-                    (b.purpose || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-                    (b.resource?.name || b.resourceName || '').toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-                  .map((booking) => (
+                {bookings.map((booking) => (
                   <tr
                     key={booking.id}
                     className={`border-l-4 ${ROW_BORDER_MAP[booking.status] || 'border-l-transparent'} hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors`}
                   >
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                      {booking.resource?.name ?? booking.resourceName ?? '—'}
+                      <Link to={`/bookings/${booking.id}`} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                        {booking.resource?.name ?? booking.resourceName ?? '—'}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       <span>{formatDateTimeRange(booking.startTime, booking.endTime)}</span>
                       {booking.startTime && booking.endTime && (
-                        <span className="ml-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                        <span className="ml-2 text-xs font-medium text-indigo-500 dark:text-indigo-400">
                           ({formatDuration(booking.startTime, booking.endTime)})
                         </span>
                       )}
@@ -205,6 +171,11 @@ export default function BookingListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={booking.status} />
+                      {booking.status === 'WAITLISTED' && booking.waitlistPosition && (
+                        <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                          <ListOrdered className="h-3 w-3" />#{booking.waitlistPosition} in line
+                        </span>
+                      )}
                       {booking.status === 'REJECTED' && booking.adminComment && (
                         <p className="mt-1 text-xs text-red-500 dark:text-red-400 truncate max-w-[200px]" title={booking.adminComment}>
                           Reason: {booking.adminComment}
@@ -212,6 +183,14 @@ export default function BookingListPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right flex justify-end gap-1">
+                      <Link
+                        to={`/bookings/${booking.id}`}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                        title="View details"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        View
+                      </Link>
                       <BookingQRCode booking={booking} />
                       {canCheckIn(booking) && (
                         <button
@@ -227,6 +206,16 @@ export default function BookingListPage() {
                         <span className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                           <LogIn className="h-3.5 w-3.5" /> Checked In
                         </span>
+                      )}
+                      {booking.status === 'WAITLISTED' && (
+                        <button
+                          onClick={() => handleLeaveWaitlist(booking.id)}
+                          disabled={leavingWaitlist[booking.id]}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          {leavingWaitlist[booking.id] ? '…' : 'Leave Waitlist'}
+                        </button>
                       )}
                       {canCancel(booking.status) && (
                         <button

@@ -195,7 +195,11 @@ function AdminDashboard({ user }) {
     setProcessing((p) => ({ ...p, [id]: action }));
     try {
       if (action === 'approve') await bookingService.approve(id);
-      else await bookingService.reject(id);
+      else {
+        await bookingService.reject(id, {
+          adminComment: 'Rejected from operations dashboard (use Bookings admin for a detailed reason).',
+        });
+      }
       setPendingBookings((prev) => prev.filter((b) => b.id !== id));
     } catch {
       // silently handle

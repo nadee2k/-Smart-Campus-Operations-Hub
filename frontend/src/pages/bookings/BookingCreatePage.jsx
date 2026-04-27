@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import {
   ArrowLeft,
   CalendarPlus,
+  Check,
   Clock,
   Users,
   FileText,
@@ -14,13 +15,11 @@ import {
   Sparkles,
   AlertTriangle,
   Monitor,
-  Map,
-  List,
-  Check,
+  ListOrdered,
 } from 'lucide-react';
 
-const TIMELINE_START = 0;
-const TIMELINE_END = 24;
+const TIMELINE_START = 8;
+const TIMELINE_END = 22;
 const TIMELINE_HOURS = TIMELINE_END - TIMELINE_START;
 
 function formatTime(dateStr) {
@@ -42,25 +41,12 @@ function getDateFromDatetime(datetimeStr) {
   return datetimeStr.split('T')[0];
 }
 
-function AvailabilityTimeline({ calendarEvents, loading, selectedStart, selectedEnd }) {
+function AvailabilityTimeline({ calendarEvents, loading }) {
   const hours = Array.from({ length: TIMELINE_HOURS }, (_, i) => TIMELINE_START + i);
 
   const blocks = useMemo(() => {
     if (!calendarEvents?.length) return [];
-    
-    // Filter out canceled or rejected so they show as free time
-    const validEvents = calendarEvents.filter(
-      (evt) => evt.status !== 'CANCELLED' && evt.status !== 'REJECTED'
-    );
-    
-    // Ensure approved slots are rendered last (on top) if there's an exact overlap
-    validEvents.sort((a, b) => {
-      if (a.status === 'APPROVED' && b.status !== 'APPROVED') return 1;
-      if (a.status !== 'APPROVED' && b.status === 'APPROVED') return -1;
-      return 0;
-    });
-
-    return validEvents.map((evt) => {
+    return calendarEvents.map((evt) => {
       const start = new Date(evt.startTime);
       const end = new Date(evt.endTime);
       const startHour = start.getHours() + start.getMinutes() / 60;
@@ -74,27 +60,10 @@ function AvailabilityTimeline({ calendarEvents, loading, selectedStart, selected
     }).filter(Boolean);
   }, [calendarEvents]);
 
-  const selectionBlock = useMemo(() => {
-    if (!selectedStart || !selectedEnd) return null;
-    const start = new Date(selectedStart);
-    const end = new Date(selectedEnd);
-    if (isNaN(start) || isNaN(end)) return null;
-
-    const startHour = start.getHours() + start.getMinutes() / 60;
-    const endHour = end.getHours() + end.getMinutes() / 60;
-    const clampedStart = Math.max(startHour, TIMELINE_START);
-    const clampedEnd = Math.min(endHour, TIMELINE_END);
-    if (clampedEnd <= clampedStart) return null;
-
-    const leftPct = ((clampedStart - TIMELINE_START) / TIMELINE_HOURS) * 100;
-    const widthPct = ((clampedEnd - clampedStart) / TIMELINE_HOURS) * 100;
-    return { leftPct, widthPct };
-  }, [selectedStart, selectedEnd]);
-
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <Monitor className="h-4 w-4 text-zinc-600" />
+        <Monitor className="h-4 w-4 text-indigo-500" />
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
           Availability Preview
         </h3>
@@ -133,21 +102,6 @@ function AvailabilityTimeline({ calendarEvents, loading, selectedStart, selected
               />
             );
           })}
-          
-          {/* Active User Selection Overlay */}
-          {selectionBlock && (
-            <div
-              className="absolute top-0 bottom-0 pointer-events-none z-20 transition-all duration-300 rounded outline outline-1 outline-indigo-500/50 bg-indigo-500/10 overflow-hidden"
-              style={{
-                left: `${selectionBlock.leftPct}%`,
-                width: `${selectionBlock.widthPct}%`,
-                backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(99, 102, 241, 0.3) 4px, rgba(99, 102, 241, 0.3) 8px)`
-              }}
-            >
-              {/* Vibrant top bar */}
-              <div className="absolute top-0 inset-x-0 h-[2px] bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-            </div>
-          )}
         </div>
 
         <div className="flex items-center gap-4 mt-2 text-[11px] text-gray-500 dark:text-gray-400">
@@ -159,10 +113,6 @@ function AvailabilityTimeline({ calendarEvents, loading, selectedStart, selected
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-2.5 h-2.5 rounded-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600" /> Open
-          </span>
-          <span className="flex items-center gap-1 ml-4 border-l border-gray-200 dark:border-gray-700 pl-4">
-            <span className="inline-block w-3 h-3 rounded-[2px] bg-indigo-500/10 border-t border-indigo-500" style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(99, 102, 241, 0.4) 2px, rgba(99, 102, 241, 0.4) 4px)` }} />
-            <span className="text-zinc-700 dark:text-zinc-300 font-medium">Your Selection</span>
           </span>
         </div>
       </div>
@@ -199,7 +149,7 @@ function SuggestionPanel({ suggestions, onPick, loading }) {
           const et = s.end || s.endTime;
           const score = s.score ? Math.round(s.score) : 0;
           const reasoning = s.reasoning || '';
-          
+
           return (
             <button
               key={i}
@@ -208,7 +158,7 @@ function SuggestionPanel({ suggestions, onPick, loading }) {
               className="group relative rounded-xl border border-amber-200 dark:border-amber-700/50 bg-white dark:bg-gray-900 px-4 py-3 text-left hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-lg hover:scale-[1.02] transition-all overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/0 to-indigo-500/0 group-hover:from-indigo-500/5 group-hover:via-indigo-500/5 group-hover:to-indigo-500/5 transition-all" />
-              
+
               <div className="relative flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-1">
@@ -228,7 +178,7 @@ function SuggestionPanel({ suggestions, onPick, loading }) {
                     </p>
                   )}
                 </div>
-                
+
                 {score > 0 && (
                   <div className="flex flex-col items-center gap-1 shrink-0 pt-1">
                     <div className="relative w-12 h-12 flex items-center justify-center">
@@ -276,7 +226,7 @@ function SuggestionPanel({ suggestions, onPick, loading }) {
 
 function MapUnit({ resource, selected, onSelect }) {
   return (
-    <button 
+    <button
       type="button"
       onClick={() => onSelect(resource.id)}
       className={`relative rounded-xl border-2 transition-all p-3 text-left flex flex-col justify-between group overflow-hidden ${
@@ -291,12 +241,12 @@ function MapUnit({ resource, selected, onSelect }) {
             {selected && <Check className="h-3 w-3" strokeWidth={3} />}
          </div>
       </div>
-      
+
       <div className="z-10 bg-gray-100 dark:bg-gray-900/80 px-2 py-1.5 rounded-lg flex items-center justify-between mt-auto">
         <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{resource.type?.replace(/_/g, ' ') || 'ROOM'}</span>
         <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1"><Users className="h-3 w-3" /> {resource.capacity}</span>
       </div>
-      
+
       {selected && (
          <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-zinc-300 dark:bg-zinc-700 opacity-10 rounded-full blur-xl"></div>
       )}
@@ -314,11 +264,11 @@ function FloorPlanSelector({ resources, selectedId, onSelect }) {
     <div className="space-y-3">
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/20 p-2 overflow-x-auto custom-scrollbar">
         <div className="min-w-[650px] relative mt-4 mb-2 select-none mx-auto">
-        
+
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-72 h-8 bg-gradient-to-b from-gray-200 dark:from-gray-800 to-transparent rounded-t-xl border-t border-x border-gray-300 dark:border-gray-700 flex items-center justify-center text-xs font-bold uppercase tracking-[0.2em] text-gray-400 z-0">
              Main Entrance
           </div>
-          
+
           <div className="flex gap-4 pt-6">
              {/* Left Wing */}
              <div className="flex-1 grid grid-cols-2 gap-3 z-10">
@@ -326,7 +276,7 @@ function FloorPlanSelector({ resources, selectedId, onSelect }) {
                   <MapUnit key={r.id} resource={r} selected={selectedId == r.id} onSelect={onSelect} />
                 ))}
              </div>
-             
+
              {/* Corridor */}
              <div className="w-16 relative flex flex-col items-center shrink-0">
                 <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 border-l-2 border-dashed border-gray-300 dark:border-gray-700 z-0"></div>
@@ -334,7 +284,7 @@ function FloorPlanSelector({ resources, selectedId, onSelect }) {
                    CENTRAL CORRIDOR
                 </div>
              </div>
-             
+
              {/* Right Wing */}
              <div className="flex-1 grid grid-cols-2 gap-3 z-10">
                 {rightResources.map(r => (
@@ -356,7 +306,6 @@ export default function BookingCreatePage() {
   const resourceIdParam = searchParams.get('resourceId') || '';
   const startParam = searchParams.get('start') || '';
 
-  const [viewMode, setViewMode] = useState('FLOOR_PLAN'); // 'LIST' | 'FLOOR_PLAN'
   const [resources, setResources] = useState([]);
   const [loadingResources, setLoadingResources] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -377,6 +326,8 @@ export default function BookingCreatePage() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [conflictDetected, setConflictDetected] = useState(false);
+  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
 
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
@@ -423,8 +374,8 @@ export default function BookingCreatePage() {
     if (!form.purpose?.trim()) next.purpose = 'Purpose is required';
     if (form.expectedAttendees === '' || form.expectedAttendees == null) {
       next.expectedAttendees = 'Expected attendees is required';
-    } else if (Number(form.expectedAttendees) < 1) {
-      next.expectedAttendees = 'At least 1 attendee required';
+    } else if (Number(form.expectedAttendees) < 0) {
+      next.expectedAttendees = 'Must be 0 or greater';
     }
     if (form.startTime && form.endTime && new Date(form.endTime) <= new Date(form.startTime)) {
       next.endTime = 'End time must be after start time';
@@ -454,50 +405,57 @@ export default function BookingCreatePage() {
       .finally(() => setLoadingSuggestions(false));
   };
 
+  const buildPayload = (joinWaitlist = false) => ({
+    resourceId: form.resourceId,
+    startTime: form.startTime,
+    endTime: form.endTime,
+    purpose: form.purpose.trim(),
+    expectedAttendees: Number(form.expectedAttendees),
+    joinWaitlist,
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     setSuggestions([]);
-    // Ensure resourceId is a number (backend expects Long)
-    // Append seconds to datetime strings for proper LocalDateTime parsing
-    const ensureSeconds = (dt) => dt && dt.length === 16 ? dt + ':00' : dt;
-    const payload = {
-      resourceId: Number(form.resourceId),
-      startTime: ensureSeconds(form.startTime),
-      endTime: ensureSeconds(form.endTime),
-      purpose: form.purpose.trim(),
-      expectedAttendees: Number(form.expectedAttendees),
-    };
-
+    setConflictDetected(false);
     setSubmitting(true);
     bookingService
-      .create(payload)
+      .create(buildPayload())
       .then(() => {
         toast.success('Booking created successfully');
         navigate('/bookings');
       })
       .catch((err) => {
         if (err.response?.status === 409) {
-          toast.error(err.response?.data?.message || 'This time slot is not available');
+          setConflictDetected(true);
           fetchSuggestions(form.resourceId, form.startTime, form.endTime);
         } else {
-          const d = err.response?.data;
-          if (d?.errors && Object.keys(d.errors).length > 0) {
-            toast.error(Object.values(d.errors).join(', '));
-          } else {
-            toast.error(d?.message || 'Failed to create booking');
-          }
+          toast.error(err.response?.data?.message || 'Failed to create booking');
         }
       })
       .finally(() => setSubmitting(false));
   };
 
+  const handleJoinWaitlist = () => {
+    setJoiningWaitlist(true);
+    bookingService
+      .create(buildPayload(true))
+      .then((res) => {
+        const pos = res.data?.waitlistPosition;
+        toast.success(pos ? `Added to waitlist — you're #${pos} in line!` : 'Added to waitlist!');
+        navigate('/bookings');
+      })
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to join waitlist'))
+      .finally(() => setJoiningWaitlist(false));
+  };
+
   const applySuggestion = (s) => {
     setForm((prev) => ({
       ...prev,
-      startTime: toLocalDatetimeString(s.start || s.startTime),
-      endTime: toLocalDatetimeString(s.end || s.endTime),
+      startTime: toLocalDatetimeString(s.startTime),
+      endTime: toLocalDatetimeString(s.endTime),
     }));
     setSuggestions([]);
     toast.success('Time slot applied — review and submit');
@@ -508,8 +466,15 @@ export default function BookingCreatePage() {
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
+  const selectedResource = resources.find((r) => String(r.id) === String(form.resourceId));
+  const capacityExceeded =
+    selectedResource &&
+    form.expectedAttendees !== '' &&
+    form.expectedAttendees != null &&
+    Number(form.expectedAttendees) > selectedResource.capacity;
+
   const inputBase =
-    'w-full px-4 py-2.5 rounded-xl border bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 transition-shadow';
+    'w-full px-4 py-2.5 rounded-xl border bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-shadow';
   const inputError = 'border-red-500 dark:border-red-500';
   const inputNormal = 'border-gray-200 dark:border-gray-700';
 
@@ -525,7 +490,7 @@ export default function BookingCreatePage() {
 
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-2.5 rounded-xl bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 shadow-sm">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25">
             <CalendarPlus className="h-6 w-6" />
           </div>
           <div>
@@ -538,83 +503,29 @@ export default function BookingCreatePage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 space-y-5">
-            {/* View Mode Toggle */}
-            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit mb-4 border border-gray-200 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={() => setViewMode('FLOOR_PLAN')}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${viewMode === 'FLOOR_PLAN' ? 'bg-white dark:bg-gray-900 text-zinc-700 dark:text-zinc-300 shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
-              >
-                <Map className="h-4 w-4" /> Map View
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('LIST')}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${viewMode === 'LIST' ? 'bg-white dark:bg-gray-900 text-zinc-700 dark:text-zinc-300 shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
-              >
-                <List className="h-4 w-4" /> List View
-              </button>
-            </div>
-
             {/* Resource */}
-            {viewMode === 'FLOOR_PLAN' ? (
-              <div className="mb-2">
-                 <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                   <Map className="h-4 w-4 text-gray-400" />
-                   Choose Location
-                 </div>
-                 <FloorPlanSelector 
-                   resources={resources} 
-                   selectedId={form.resourceId} 
-                   onSelect={(id) => update('resourceId', id)} 
-                 />
-                 {errors.resourceId && (
-                   <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 font-medium text-center shadow-sm">
-                      {errors.resourceId}
-                   </div>
-                 )}
-              </div>
-            ) : (
-              <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  <List className="h-4 w-4 text-gray-400" />
-                  Select Resource
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                   {resources.length === 0 && !loadingResources && (
-                      <div className="col-span-full border-2 border-dashed border-gray-200 dark:border-gray-800 p-6 rounded-2xl text-center text-gray-500 text-sm">No resources found</div>
-                   )}
-                   {resources.map((r) => (
-                      <button
-                         key={r.id}
-                         type="button"
-                         onClick={() => update('resourceId', String(r.id))}
-                         className={`flex items-start gap-3 p-4 rounded-xl border-2 transition-all text-left group ${
-                            String(form.resourceId) === String(r.id)
-                               ? 'border-indigo-500 bg-zinc-100 dark:bg-zinc-800 shadow-[0_0_15px_rgba(99,102,241,0.15)] scale-[1.01]' 
-                               : 'border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-white dark:hover:bg-gray-800'
-                         }`}
-                      >
-                         <div className={`mt-0.5 shrink-0 flex items-center justify-center h-5 w-5 rounded-full border-2 transition-colors ${
-                            String(form.resourceId) === String(r.id) ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-300 dark:border-gray-600 group-hover:border-indigo-400'
-                         }`}>
-                            {String(form.resourceId) === String(r.id) && <Check className="h-3 w-3" strokeWidth={3} />}
-                         </div>
-                         <div>
-                            <p className={`font-semibold text-sm ${String(form.resourceId) === String(r.id) ? 'text-indigo-800 dark:text-indigo-300' : 'text-gray-900 dark:text-white'}`}>{r.name}</p>
-                            <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                               <span className="flex items-center font-medium gap-1 text-gray-600 dark:text-gray-300"><Users className="h-3 w-3"/> {r.capacity}</span>
-                               <span className="uppercase tracking-widest text-[9px] font-bold opacity-60 bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">{r.type?.replace(/_/g, ' ') || 'ROOM'}</span>
-                            </div>
-                         </div>
-                      </button>
-                   ))}
-                </div>
-                {errors.resourceId && (
-                  <p className="mt-2 text-xs text-red-500 font-medium">{errors.resourceId}</p>
-                )}
-              </div>
-            )}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                <Monitor className="h-4 w-4 text-gray-400" />
+                Resource
+              </label>
+              <select
+                value={form.resourceId}
+                onChange={(e) => update('resourceId', e.target.value)}
+                disabled={loadingResources}
+                className={`${inputBase} ${errors.resourceId ? inputError : inputNormal}`}
+              >
+                <option value="">Select a resource</option>
+                {resources.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+              {errors.resourceId && (
+                <p className="mt-1 text-xs text-red-500">{errors.resourceId}</p>
+              )}
+            </div>
 
             {/* Start Time */}
             <div>
@@ -653,12 +564,7 @@ export default function BookingCreatePage() {
 
           {/* Availability Timeline */}
           {form.resourceId && selectedDate && (
-            <AvailabilityTimeline 
-              calendarEvents={calendarEvents} 
-              loading={loadingCalendar} 
-              selectedStart={form.startTime} 
-              selectedEnd={form.endTime} 
-            />
+            <AvailabilityTimeline calendarEvents={calendarEvents} loading={loadingCalendar} />
           )}
 
           {/* Conflict Suggestions */}
@@ -695,7 +601,7 @@ export default function BookingCreatePage() {
               </label>
               <input
                 type="number"
-                min={1}
+                min={0}
                 value={form.expectedAttendees}
                 onChange={(e) => update('expectedAttendees', e.target.value)}
                 className={`${inputBase} ${errors.expectedAttendees ? inputError : inputNormal}`}
@@ -704,15 +610,57 @@ export default function BookingCreatePage() {
               {errors.expectedAttendees && (
                 <p className="mt-1 text-xs text-red-500">{errors.expectedAttendees}</p>
               )}
+              {capacityExceeded && (
+                <div className="mt-2 flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div className="text-sm text-amber-700 dark:text-amber-300">
+                    <p className="font-medium">Capacity exceeded</p>
+                    <p className="text-xs mt-0.5 text-amber-600 dark:text-amber-400">
+                      <span className="font-semibold">{selectedResource.name}</span> has a maximum capacity of{' '}
+                      <span className="font-semibold">{selectedResource.capacity}</span> people, but you entered{' '}
+                      <span className="font-semibold">{form.expectedAttendees}</span>. You can still submit, but the booking may be rejected.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Waitlist Banner — shown when conflict detected */}
+          {conflictDetected && (
+            <div className="rounded-2xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50 dark:bg-indigo-950/30 p-5 space-y-3">
+              <div className="flex items-start gap-3">
+                <ListOrdered className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">
+                    This time slot is already taken
+                  </p>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">
+                    Join the waitlist and we'll automatically notify you and move your booking to Pending if the slot becomes available.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleJoinWaitlist}
+                disabled={joiningWaitlist}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-indigo-500/20"
+              >
+                {joiningWaitlist ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Joining…</>
+                ) : (
+                  <><ListOrdered className="h-4 w-4" /> Join Waitlist</>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm border border-transparent rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25"
             >
               {submitting ? (
                 <>
